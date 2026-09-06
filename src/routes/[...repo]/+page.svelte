@@ -28,21 +28,31 @@
 	const all = $derived(repo.tasks);
 	const stats = $derived(counts(all));
 	const summary = $derived(summarise(all));
-	const priorities = $derived(byPriority(all));
-	const tags = $derived(byTag(all));
+
+	// Priority and tags describe what is left to do, so they count open tasks
+	// only, as `tatr ls` does. Clicking one then lands on those same tasks
+	// rather than on a list padded with everything already finished.
+	const openTasks = $derived(repo.open);
+	const priorities = $derived(byPriority(openTasks));
+	const tags = $derived(byTag(openTasks));
+	const top = $derived(topByPriority(openTasks, 8));
+
+	// The calendar is history, so it keeps both series and is not a filter.
 	const months = $derived(byMonth(all));
-	const top = $derived(topByPriority(all.filter((task) => !task.closed), 8));
 
 	const maxPriority = $derived(Math.max(1, ...priorities.map((bucket) => bucket.count)));
 	const maxTag = $derived(Math.max(1, ...tags.map((bucket) => bucket.count)));
 	const maxMonth = $derived(Math.max(1, ...months.map((bucket) => bucket.open + bucket.closed)));
 
-	/** Clicking a bar means "show me those tasks", so it opens the filtered list. */
+	/**
+	 * Clicking a bar means "show me those tasks", so it opens the filtered list —
+	 * open only, matching what the bar counted.
+	 */
 	function pick(term: string) {
 		query.text = term;
-		query.showClosed = true;
+		query.showClosed = false;
 		goto(
-			`${resolve('/[...repo]/list', { repo: formatRepoPath(ref) })}?q=${encodeURIComponent(term)}&closed=1`
+			`${resolve('/[...repo]/list', { repo: formatRepoPath(ref) })}?q=${encodeURIComponent(term)}`
 		);
 	}
 
@@ -85,11 +95,11 @@
 		<div class="charts">
 			<section class="panel">
 				<header>
-					<h2>By priority</h2>
+					<h2>Open by priority</h2>
 					<span class="hint">higher is more urgent</span>
 				</header>
 				{#if priorities.length === 0}
-					<p class="empty">No tasks yet.</p>
+					<p class="empty">Nothing open.</p>
 				{:else}
 					<ul class="bars">
 						{#each priorities as bucket (bucket.priority)}
@@ -110,11 +120,11 @@
 
 			<section class="panel">
 				<header>
-					<h2>By tag</h2>
-					<span class="hint">click to filter</span>
+					<h2>Open by tag</h2>
+					<span class="hint">click to see them</span>
 				</header>
 				{#if tags.length === 0}
-					<p class="empty">No task carries a tag.</p>
+					<p class="empty">No open task carries a tag.</p>
 				{:else}
 					<ul class="bars">
 						{#each tags as bucket (bucket.tag)}
@@ -141,6 +151,7 @@
 		<section class="panel">
 			<header>
 				<h2>Created per month</h2>
+				<span class="hint">every task ever</span>
 				<span class="legend">
 					<span class="key open"></span> still open
 					<span class="key closed"></span> since closed
