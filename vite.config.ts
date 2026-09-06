@@ -4,9 +4,17 @@ import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 /**
- * The site is served from https://yakanet.github.io/tatr-dashboard rather than from
- * the root, so the deploy workflow passes the repository name as `BASE_PATH`. An
- * empty base is correct for `vite dev` and for a custom domain.
+ * The site is served from https://github.broutin.dev/tatr-dashboard rather than
+ * from the root, so the deploy workflow passes the repository name as
+ * `BASE_PATH`.
+ *
+ * That domain belongs to the account rather than to this project: it is set on
+ * the user site, which makes GitHub serve every project of the account under it
+ * and redirect the github.io addresses there. The repository name therefore
+ * stays in the path.
+ *
+ * An empty base is correct for `vite dev`, and for a domain pointed at this
+ * project alone.
  */
 function basePath(): '' | `/${string}` {
 	if (process.argv.includes('dev')) return '';

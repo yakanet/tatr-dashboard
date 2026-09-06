@@ -5,8 +5,8 @@
 **Any repository's `tasks/` folder, read like an issue tracker.**<br>
 In the browser. No server, no backend, no clone.
 
-[**Open it →**](https://yakanet.github.io/tatr-dashboard) &nbsp;·&nbsp;
-[Watch it read its own backlog](https://yakanet.github.io/tatr-dashboard/yakanet/tatr-dashboard) &nbsp;·&nbsp;
+[**Open it →**](https://github.broutin.dev/tatr-dashboard) &nbsp;·&nbsp;
+[Watch it read its own backlog](https://github.broutin.dev/tatr-dashboard/yakanet/tatr-dashboard) &nbsp;·&nbsp;
 [What is tatr?](https://github.com/tsoding/tatr)
 
 [![Deploy](https://github.com/yakanet/tatr-dashboard/actions/workflows/deploy.yml/badge.svg)](https://github.com/yakanet/tatr-dashboard/actions/workflows/deploy.yml)
@@ -96,7 +96,7 @@ behind the same IP address, so:
 
 The only third-party request left anywhere is the webfont stylesheet, and
 bringing it in-house is
-[task `20260906-211248`](https://yakanet.github.io/tatr-dashboard/yakanet/tatr-dashboard/task/20260906-211248).
+[task `20260906-211248`](https://github.broutin.dev/tatr-dashboard/yakanet/tatr-dashboard/task/20260906-211248).
 
 ## Identical to the CLI — and that claim is tested
 
@@ -147,7 +147,7 @@ fallback.
 
 This repository keeps its own work in its own `tasks/` folder, in the tatr
 format — which is why every example above is a live URL. Open
-[`/yakanet/tatr-dashboard`](https://yakanet.github.io/tatr-dashboard/yakanet/tatr-dashboard)
+[`/yakanet/tatr-dashboard`](https://github.broutin.dev/tatr-dashboard/yakanet/tatr-dashboard)
 and you are reading the backlog of the thing you are reading it with. Its tags
 are documented in `tasks/tags`, exactly as tatr expects:
 
