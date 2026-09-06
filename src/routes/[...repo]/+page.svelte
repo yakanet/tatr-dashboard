@@ -155,11 +155,20 @@
 						{@const total = bucket.open + bucket.closed}
 						<div class="month" title="{bucket.month}: {bucket.open} open, {bucket.closed} closed">
 							<div class="stack">
+								<!-- The column is bottom-anchored, so the first segment drawn sits on
+								     top and is the one carrying the rounded data end. -->
 								{#if bucket.closed > 0}
-									<div class="seg closed" style:height="{(bucket.closed / maxMonth) * 100}%"></div>
+									<div
+										class="seg closed top"
+										style:height="{(bucket.closed / maxMonth) * 100}%"
+									></div>
 								{/if}
 								{#if bucket.open > 0}
-									<div class="seg open" style:height="{(bucket.open / maxMonth) * 100}%"></div>
+									<div
+										class="seg open"
+										class:top={bucket.closed === 0}
+										style:height="{(bucket.open / maxMonth) * 100}%"
+									></div>
 								{/if}
 							</div>
 							<span class="tick mono">{monthLabel(bucket.month)}</span>
@@ -422,12 +431,13 @@
 	}
 
 	.seg {
-		border-radius: 3px 3px 0 0;
+		/* Square where it meets the baseline or the segment below it. */
+		border-radius: 0;
 		min-height: 2px;
 	}
 
-	.seg.closed {
-		border-radius: 0;
+	.seg.top {
+		border-radius: 3px 3px 0 0;
 	}
 
 	.tick {
