@@ -1,8 +1,9 @@
 /*
- * Design tokens. The source of truth for these values is the design canvas
- * (.claude/design/Foundations.dc.html): surfaces and ink are a selected pair, and the
- * data colours were validated rather than eyeballed — the priority ramp passes
- * the ordinal checks against both surfaces, and open-vs-closed clears CVD
+ * Design tokens.
+ *
+ * Surfaces and ink are a selected pair rather than an inversion, and the data
+ * colours were validated rather than eyeballed: the priority ramp passes the
+ * ordinal checks against both surfaces, and open-vs-closed clears CVD
  * separation and 3:1 contrast.
  */
 :root {

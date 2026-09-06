@@ -5,6 +5,10 @@ on:
     branches: 'main'
   workflow_dispatch:
 
+env:
+  # corepack otherwise asks before downloading the pinned pnpm version.
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
 jobs:
   build:
     runs-on: ubuntu-latest
