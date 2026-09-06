@@ -1,0 +1,6 @@
+scope , currently working on
+format , parsing the tatr file format itself
+data , fetching and caching repository contents
+tql , the query language
+ui , screens, interaction and styling
+infra , build, deploy and tooling
