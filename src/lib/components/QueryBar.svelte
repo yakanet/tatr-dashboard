@@ -153,6 +153,21 @@
 			</div>
 		{/if}
 	</div>
+	<!-- Beside the language rather than inside it: TQL stays exactly what the CLI
+	     accepts, and finding a task by a word in its title needs no syntax. -->
+	<label class="find">
+		<span class="glyph" aria-hidden="true">⌕</span>
+		<input
+			bind:value={query.search}
+			oninput={() => onchange?.()}
+			placeholder="filter titles"
+			spellcheck="false"
+			autocapitalize="off"
+			autocorrect="off"
+			autocomplete="off"
+			aria-label="Filter titles"
+		/>
+	</label>
 	<span class="count"><strong>{matched}</strong> matched <span class="of">/ {pool} shown</span></span>
 	<label class="closed">
 		<input type="checkbox" bind:checked={query.showClosed} onchange={onchange} />
@@ -309,6 +324,34 @@
 
 	.mono {
 		font-family: var(--font-mono);
+	}
+
+	.find {
+		display: flex;
+		align-items: baseline;
+		gap: 0.35rem;
+		flex-shrink: 0;
+		padding-left: 0.75rem;
+		border-left: 1px solid var(--border);
+	}
+
+	.glyph {
+		font-size: 0.9rem;
+		color: var(--muted);
+	}
+
+	.find input {
+		width: 9rem;
+		font: inherit;
+		font-size: 0.8rem;
+		color: inherit;
+		background: none;
+		border: none;
+		outline: none;
+	}
+
+	.find input::placeholder {
+		color: var(--muted);
 	}
 
 	.count {

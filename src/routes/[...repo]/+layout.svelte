@@ -16,6 +16,7 @@
 	// One query too: the charts filter the list and vice versa.
 	const query = new QueryState();
 	query.text = page.url.searchParams.get('q') ?? '';
+	query.search = page.url.searchParams.get('text') ?? '';
 	query.showClosed = page.url.searchParams.get('closed') === '1';
 	setContext(QUERY, query);
 
@@ -31,6 +32,7 @@
 	const search = $derived.by(() => {
 		const params = new URLSearchParams();
 		if (query.text.trim()) params.set('q', query.text.trim());
+		if (query.search.trim()) params.set('text', query.search.trim());
 		if (query.showClosed) params.set('closed', '1');
 		const rendered = params.toString();
 		return rendered ? `?${rendered}` : '';
