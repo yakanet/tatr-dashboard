@@ -82,4 +82,24 @@ describe('conformance with the tatr parser', () => {
 		expect(open[0].priority).toBe(110);
 		expect(open.at(-1)!.priority).toBe(10);
 	});
+
+	it('extracts the cross-reference graph the repository actually contains', () => {
+		const tasks = Object.entries(sources).map(([id, source]) => readTask(id, source)!);
+		const known = new Set(tasks.map((task) => task.id));
+
+		const edges = tasks.flatMap((task) =>
+			task.references.filter((ref) => known.has(ref)).map((ref) => `${task.id}->${ref}`)
+		);
+		const nodes = new Set(edges.flatMap((edge) => edge.split('->')));
+
+		// Measured on the real repository. Counting these correctly means honouring
+		// team suffixes: `20260826-204052` cites `20260830-000838-rexim`, an edge a
+		// pattern without the suffix silently misses.
+		expect(edges).toHaveLength(27);
+		expect(nodes.size).toBe(30);
+
+		// The hub, cited by four other tasks and citing two.
+		const incoming = edges.filter((edge) => edge.endsWith('->20260310-133453'));
+		expect(incoming).toHaveLength(3);
+	});
 });

@@ -6,19 +6,25 @@
  * and whether it may be stale. Contents always come from raw.githubusercontent,
  * which imposes no budget.
  *
- * A loaded repository is cached whole and never expires on its own: quota is
- * only ever spent on a first visit or on an explicit refresh, so the reader
- * decides when to pay for fresh data. {@link LoadResult.storedAt} carries the
- * age so the UI can show it next to that refresh control.
+ * A loaded repository is cached and never expires on its own: quota is only ever
+ * spent on a first visit or on an explicit refresh, so the reader decides when
+ * to pay for fresh data. {@link LoadResult.storedAt} carries the age so the UI
+ * can show it next to that refresh control.
+ *
+ * Only metadata is cached — descriptions are more than half the bytes and are
+ * cheap to re-read, since raw.githubusercontent costs no quota. What the graph
+ * needs from those descriptions, the referenced task ids, is extracted at parse
+ * time and kept, so dropping the prose costs no feature.
  */
 import { readTask, type Task } from '../tatr/task.ts';
+import { parseTaskMd } from '../tatr/task-md.ts';
 import { parseTagsFile, type TagDescriptions } from '../tatr/tags-file.ts';
 import { isValidHuid } from '../tatr/huid.ts';
 import { repoKey, type RepoRef } from '../repo/ref.ts';
 import { github, rawUrl } from './github.ts';
 import { jsdelivr } from './jsdelivr.ts';
 import { ungh } from './ungh.ts';
-import { readCache, writeCache, type CacheStorage } from './cache.ts';
+import { openStore, type RepoStore } from './store.ts';
 import { ProviderError, type Listing, type Provider } from './provider.ts';
 
 /** Tried in order. GitHub first so the normal path depends on nobody else. */
@@ -34,8 +40,8 @@ export interface LoadOptions {
 	fetchImpl?: typeof fetch;
 	/** Ignore any cached copy and fetch again. This is what the refresh control does. */
 	refresh?: boolean;
-	/** Storage for the cache; defaults to localStorage, absent in non-browser contexts. */
-	storage?: CacheStorage | null;
+	/** Where to cache; defaults to IndexedDB, falling back to memory. */
+	store?: RepoStore;
 	now?: () => number;
 }
 
@@ -94,32 +100,22 @@ async function pooled<T, R>(items: T[], limit: number, worker: (item: T) => Prom
 	return results;
 }
 
-/** A cached load, minus the fields that describe this particular retrieval. */
-type CachedLoad = Omit<LoadResult, 'fromCache' | 'storedAt' | 'tags'> & {
-	tagDescriptions: [string, string][];
-	redefinedTags: string[];
-};
+/** What is cached: no descriptions, and none of the fields describing this retrieval. */
+type CachedLoad = Omit<LoadResult, 'fromCache' | 'storedAt'>;
+
+/** Strips the bodies before storing. References were extracted at parse time. */
+function withoutDescriptions(tasks: Task[]): Task[] {
+	return tasks.map(({ description: _description, ...rest }) => rest);
+}
 
 export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): Promise<LoadResult> {
 	const key = repoKey(ref);
-	const storage = options.storage === undefined ? undefined : options.storage;
+	const store = options.store ?? openStore();
 
 	if (!options.refresh) {
-		const cached =
-			storage === undefined ? readCache<CachedLoad>(key) : readCache<CachedLoad>(key, storage);
-		if (cached) {
-			return {
-				...cached.value,
-				// Dates do not survive JSON, so rebuild them.
-				tasks: cached.value.tasks.map((task) => ({ ...task, created: new Date(task.created) })),
-				tags: {
-					descriptions: new Map(cached.value.tagDescriptions),
-					redefined: cached.value.redefinedTags
-				},
-				fromCache: true,
-				storedAt: cached.storedAt
-			};
-		}
+		const cached = await store.read<CachedLoad>(key);
+		// IndexedDB stores structured clones, so Date and Map come back intact.
+		if (cached) return { ...cached.value, fromCache: true, storedAt: cached.storedAt };
 	}
 
 	const doFetch = options.fetchImpl ?? fetch;
@@ -176,14 +172,36 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 	const payload: CachedLoad = {
 		tasks,
 		skipped,
+		tags,
 		source: listing.source,
 		mayBeStale: listing.mayBeStale,
-		branch: listing.branch,
-		tagDescriptions: [...tags.descriptions],
-		redefinedTags: tags.redefined
+		branch: listing.branch
 	};
-	if (storage === undefined) writeCache(key, payload, storedAt);
-	else writeCache(key, payload, storedAt, storage);
+	await store.write(key, { ...payload, tasks: withoutDescriptions(tasks) }, storedAt);
 
-	return { ...payload, tags, fromCache: false, storedAt };
+	// The caller gets the bodies it just paid for; only the cache goes without.
+	return { ...payload, fromCache: false, storedAt };
+}
+
+/**
+ * Reads one task's body on demand, for the detail view. Free of the API budget,
+ * and roughly 30 ms, so it is cheaper to re-read than to keep every description
+ * in storage.
+ */
+export async function loadTaskDescription(
+	ref: RepoRef,
+	branch: string,
+	id: string,
+	options: { fetchImpl?: typeof fetch; signal?: AbortSignal } = {}
+): Promise<string | null> {
+	const doFetch = options.fetchImpl ?? fetch;
+	try {
+		const response = await doFetch(rawUrl(ref, branch, `tasks/${id}/TASK.md`), {
+			signal: options.signal
+		});
+		if (!response.ok) return null;
+		return parseTaskMd(await response.text()).description;
+	} catch {
+		return null;
+	}
 }

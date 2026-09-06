@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import rawTasks from '../../../tests/fixtures/tsoding-tatr-raw.json' with { type: 'json' };
 import { parseRepoPath } from '../repo/ref.ts';
-import { memoryStorage } from './cache.ts';
+import { memoryStore } from './store.ts';
 import { NoTasksFolderError, loadRepository, listRepository } from './load.ts';
 import { ProviderError, type Listing, type Provider } from './provider.ts';
 
@@ -48,10 +48,10 @@ const fetchFixture = vi.fn(async (input: RequestInfo | URL) => {
 	return new Response('not found', { status: 404 });
 }) as unknown as typeof fetch;
 
-let storage = memoryStorage();
+let store = memoryStore();
 
 beforeEach(() => {
-	storage = memoryStorage();
+	store = memoryStore();
 	vi.clearAllMocks();
 });
 
@@ -98,7 +98,7 @@ describe('loadRepository', () => {
 		const result = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		expect(result.tasks).toHaveLength(64);
 		expect(result.tasks.filter((task) => !task.closed)).toHaveLength(23);
@@ -109,7 +109,7 @@ describe('loadRepository', () => {
 		const result = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		expect(result.tags.descriptions.get('release')).toBe('planned for the next release');
 	});
@@ -119,7 +119,7 @@ describe('loadRepository', () => {
 		await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage,
+			store,
 			onProgress
 		});
 		expect(onProgress).toHaveBeenCalledTimes(64);
@@ -139,7 +139,7 @@ describe('loadRepository', () => {
 		await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: counting,
-			storage,
+			store,
 			concurrency: 4
 		});
 		expect(peak).toBeLessThanOrEqual(4);
@@ -151,7 +151,7 @@ describe('loadRepository', () => {
 			list: async () => ({ entries: [{ path: 'README.md' }], source: 'github', mayBeStale: false, branch: 'HEAD' })
 		};
 		await expect(
-			loadRepository(ref, { providers: [bare], fetchImpl: fetchFixture, storage })
+			loadRepository(ref, { providers: [bare], fetchImpl: fetchFixture, store })
 		).rejects.toThrow(NoTasksFolderError);
 	});
 
@@ -164,7 +164,7 @@ describe('loadRepository', () => {
 		const result = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: flaky,
-			storage
+			store
 		});
 		expect(result.tasks).toHaveLength(63);
 		expect(result.skipped).toEqual([{ id: '20260826-200847', reason: 'Could not be read' }]);
@@ -180,7 +180,7 @@ describe('loadRepository', () => {
 		const result = await loadRepository(ref, {
 			providers: [withJunk],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		expect(result.skipped).toEqual([{ id: 'notes', reason: 'Folder name is not a task id' }]);
 	});
@@ -195,21 +195,21 @@ describe('loadRepository', () => {
 		const result = await loadRepository(ref, {
 			providers: [noTags],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		expect(result.tags.descriptions.size).toBe(0);
 	});
 });
 
 describe('caching', () => {
-	it('serves a revisit from storage, spending no quota at all', async () => {
+	it('serves a revisit from store, spending no quota at all', async () => {
 		const provider = fakeProvider('github');
 		const spy = vi.spyOn(provider, 'list');
 
-		const first = await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, storage });
+		const first = await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, store });
 		expect(first.fromCache).toBe(false);
 
-		const second = await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, storage });
+		const second = await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, store });
 		expect(second.fromCache).toBe(true);
 		expect(second.tasks).toHaveLength(64);
 		// The listing is the only rate-limited call; it must not happen twice.
@@ -220,11 +220,11 @@ describe('caching', () => {
 		const provider = fakeProvider('github');
 		const spy = vi.spyOn(provider, 'list');
 
-		await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, storage });
+		await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, store });
 		const refreshed = await loadRepository(ref, {
 			providers: [provider],
 			fetchImpl: fetchFixture,
-			storage,
+			store,
 			refresh: true
 		});
 		expect(refreshed.fromCache).toBe(false);
@@ -235,23 +235,23 @@ describe('caching', () => {
 		await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage,
+			store,
 			now: () => 1_000
 		});
 		const cached = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		expect(cached.storedAt).toBe(1_000);
 	});
 
 	it('restores dates across the cache, which JSON cannot carry', async () => {
-		await loadRepository(ref, { providers: [fakeProvider('github')], fetchImpl: fetchFixture, storage });
+		await loadRepository(ref, { providers: [fakeProvider('github')], fetchImpl: fetchFixture, store });
 		const cached = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		const earliest = cached.tasks.reduce((a, b) => (a.created < b.created ? a : b));
 		expect(earliest.created).toBeInstanceOf(Date);
@@ -259,11 +259,11 @@ describe('caching', () => {
 	});
 
 	it('restores the tag descriptions, which are a Map', async () => {
-		await loadRepository(ref, { providers: [fakeProvider('github')], fetchImpl: fetchFixture, storage });
+		await loadRepository(ref, { providers: [fakeProvider('github')], fetchImpl: fetchFixture, store });
 		const cached = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage
+			store
 		});
 		expect(cached.tags.descriptions.get('release')).toBe('planned for the next release');
 	});
@@ -272,9 +272,56 @@ describe('caching', () => {
 		const result = await loadRepository(ref, {
 			providers: [fakeProvider('github')],
 			fetchImpl: fetchFixture,
-			storage: null
+			store: memoryStore()
 		});
 		expect(result.tasks).toHaveLength(64);
 		expect(result.fromCache).toBe(false);
+	});
+});
+
+describe('what the cache keeps', () => {
+	it('returns the bodies the caller just paid for', async () => {
+		const result = await loadRepository(ref, {
+			providers: [fakeProvider('github')],
+			fetchImpl: fetchFixture,
+			store
+		});
+		expect(result.tasks.every((task) => typeof task.description === 'string')).toBe(true);
+	});
+
+	it('stores metadata only, dropping the descriptions', async () => {
+		await loadRepository(ref, { providers: [fakeProvider('github')], fetchImpl: fetchFixture, store });
+		const cached = await loadRepository(ref, {
+			providers: [fakeProvider('github')],
+			fetchImpl: fetchFixture,
+			store
+		});
+		expect(cached.fromCache).toBe(true);
+		expect(cached.tasks.every((task) => task.description === undefined)).toBe(true);
+	});
+
+	it('keeps the references, so the graph survives without the prose', async () => {
+		await loadRepository(ref, { providers: [fakeProvider('github')], fetchImpl: fetchFixture, store });
+		const cached = await loadRepository(ref, {
+			providers: [fakeProvider('github')],
+			fetchImpl: fetchFixture,
+			store
+		});
+		const hub = cached.tasks.find((task) => task.id === '20260826-200847');
+		expect(hub?.references).toContain('20260826-152351');
+		expect(cached.tasks.filter((task) => task.references.length > 0).length).toBeGreaterThan(10);
+	});
+
+	it('re-reads one body on demand for the detail view', async () => {
+		const { loadTaskDescription } = await import('./load.ts');
+		const body = await loadTaskDescription(ref, 'HEAD', '20260826-200847', {
+			fetchImpl: fetchFixture
+		});
+		expect(body).toContain('Cephon wanted to kanban');
+	});
+
+	it('returns null when a body cannot be read', async () => {
+		const { loadTaskDescription } = await import('./load.ts');
+		expect(await loadTaskDescription(ref, 'HEAD', 'nope', { fetchImpl: fetchFixture })).toBeNull();
 	});
 });

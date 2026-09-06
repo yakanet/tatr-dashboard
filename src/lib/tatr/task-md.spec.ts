@@ -156,3 +156,40 @@ describe('status', () => {
 		expect(isClosed(new Map())).toBe(false);
 	});
 });
+
+describe('references', () => {
+	it('finds task ids mentioned in the body', async () => {
+		const { extractReferences } = await import('./task.ts');
+		expect(extractReferences('As we discovered in 20260826-152351 this matters.')).toEqual([
+			'20260826-152351'
+		]);
+	});
+
+	it('finds ids wrapped as TASK(...)', async () => {
+		const { extractReferences } = await import('./task.ts');
+		expect(extractReferences('See TASK(20260825-170729) for context.')).toEqual(['20260825-170729']);
+	});
+
+	it('deduplicates and sorts', async () => {
+		const { extractReferences } = await import('./task.ts');
+		expect(extractReferences('20260830-000001 then 20260101-000002 then 20260830-000001')).toEqual([
+			'20260101-000002',
+			'20260830-000001'
+		]);
+	});
+
+	it('keeps a team suffix', async () => {
+		const { extractReferences } = await import('./task.ts');
+		expect(extractReferences('see 20260830-000838-rexim')).toEqual(['20260830-000838-rexim']);
+	});
+
+	it('drops the task referring to itself', async () => {
+		const { extractReferences } = await import('./task.ts');
+		expect(extractReferences('this is 20260826-152351 itself', '20260826-152351')).toEqual([]);
+	});
+
+	it('finds nothing in prose without ids', async () => {
+		const { extractReferences } = await import('./task.ts');
+		expect(extractReferences('no ids here, just 2026 and 08-26')).toEqual([]);
+	});
+});

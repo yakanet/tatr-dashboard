@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: ui
+- TAGS: scope,ui
 
 Dense sortable table, sorted by priority descending as `tatr ls` does, with
 closed tasks hidden by default to match the CLI.

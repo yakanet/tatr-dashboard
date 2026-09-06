@@ -1,0 +1,108 @@
+/**
+ * Loading state for one repository.
+ *
+ * The two phases are visible on purpose: listing is one request that can be
+ * rate-limited, then the task files stream in and are counted. Showing that
+ * split is what lets the UI explain a failure instead of just spinning.
+ */
+import { loadRepository, NoTasksFolderError } from '../sources/load.ts';
+import { ProviderError, type ProviderFailure } from '../sources/provider.ts';
+import type { RepoRef } from '../repo/ref.ts';
+import type { Task } from '../tatr/task.ts';
+import type { TagDescriptions } from '../tatr/tags-file.ts';
+
+export type Phase = 'idle' | 'listing' | 'reading' | 'ready' | 'failed';
+
+export interface Failure {
+	kind: ProviderFailure | 'no-tasks-folder' | 'unknown';
+	message: string;
+}
+
+export class RepositoryState {
+	phase = $state<Phase>('idle');
+	tasks = $state<Task[]>([]);
+	skipped = $state<{ id: string; reason: string }[]>([]);
+	tags = $state<TagDescriptions>({ descriptions: new Map(), redefined: [] });
+	/** Files read so far, and how many there are, for the progress bar. */
+	done = $state(0);
+	total = $state(0);
+	/** Which provider answered, and whether it serves a cached view. */
+	source = $state('');
+	mayBeStale = $state(false);
+	fromCache = $state(false);
+	storedAt = $state(0);
+	branch = $state('HEAD');
+	failure = $state<Failure | null>(null);
+
+	#controller: AbortController | null = null;
+
+	readonly open = $derived(this.tasks.filter((task) => !task.closed));
+	readonly closed = $derived(this.tasks.filter((task) => task.closed));
+
+	/** Loads a repository. Pass `refresh` to spend quota and get a fresh view. */
+	async load(ref: RepoRef, refresh = false): Promise<void> {
+		this.#controller?.abort();
+		const controller = new AbortController();
+		this.#controller = controller;
+
+		this.phase = 'listing';
+		this.failure = null;
+		this.done = 0;
+		this.total = 0;
+
+		try {
+			const result = await loadRepository(ref, {
+				refresh,
+				signal: controller.signal,
+				onProgress: (done, total) => {
+					if (controller.signal.aborted) return;
+					this.phase = 'reading';
+					this.done = done;
+					this.total = total;
+				}
+			});
+			if (controller.signal.aborted) return;
+
+			this.tasks = result.tasks;
+			this.skipped = result.skipped;
+			this.tags = result.tags;
+			this.source = result.source;
+			this.mayBeStale = result.mayBeStale;
+			this.fromCache = result.fromCache;
+			this.storedAt = result.storedAt;
+			this.branch = result.branch;
+			this.phase = 'ready';
+		} catch (error) {
+			if (controller.signal.aborted) return;
+			this.failure = describe(error);
+			this.phase = 'failed';
+		}
+	}
+
+	abort(): void {
+		this.#controller?.abort();
+		this.#controller = null;
+	}
+}
+
+function describe(error: unknown): Failure {
+	if (error instanceof NoTasksFolderError) {
+		return { kind: 'no-tasks-folder', message: error.message };
+	}
+	if (error instanceof ProviderError) {
+		return { kind: error.failure, message: error.message };
+	}
+	return { kind: 'unknown', message: error instanceof Error ? error.message : 'Something went wrong' };
+}
+
+/** "just now", "12 minutes ago", "3 hours ago" — for the refresh control. */
+export function describeAge(storedAt: number, now = Date.now()): string {
+	const seconds = Math.max(0, Math.round((now - storedAt) / 1000));
+	if (seconds < 45) return 'just now';
+	const minutes = Math.round(seconds / 60);
+	if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+	const hours = Math.round(minutes / 60);
+	if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+	const days = Math.round(hours / 24);
+	return `${days} day${days === 1 ? '' : 's'} ago`;
+}
