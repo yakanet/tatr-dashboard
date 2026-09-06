@@ -126,43 +126,46 @@ describe('summarise', () => {
 		const summary = summarise(all, new Date('2026-09-07T00:00:00Z'));
 		expect(summary.lead).toBe('23 tasks still open');
 		// December 2025 through September 2026 is ten months; five have nothing.
-		expect(summary.detail).toBe('nothing was written in five of the last ten months');
+		// "those ten months" is the span the tasks cover, which the masthead names.
+		expect(summary.detail).toBe('no task was created in five of those ten months');
 	});
 
 	it('counts the quiet months correctly', () => {
 		const months = byMonth(all);
-		const empty = months.filter((m) => m.open + m.closed === 0).length;
 		expect(months).toHaveLength(10);
-		expect(empty).toBe(5);
+		expect(months.filter((m) => m.open + m.closed === 0)).toHaveLength(5);
 	});
 
-	it('leads with the untagged share when the calendar is unremarkable', () => {
-		// Two consecutive months, so no quiet stretch, but nothing is tagged.
+	it('names the month a quiet repository stopped at, not a duration', () => {
+		// "nothing new in seven months" reads as a countdown from today and invites
+		// the reader to work out when that was; the month itself does not.
+		const tasks = [make('20260101-000001', 100, ['bug']), make('20260201-000001', 100, ['bug'])];
+		expect(summarise(tasks, new Date('2026-09-07T00:00:00Z')).detail).toBe(
+			'nothing new since February 2026'
+		);
+	});
+
+	it('says what the untagged figure counts, rather than "them"', () => {
+		// The lead is about open tasks; this figure is over all of them, so a bare
+		// pronoun would attach it to the wrong number.
 		const tasks = [
 			make('20260801-000001', 100, []),
 			make('20260901-000001', 100, []),
 			make('20260901-000002', 100, ['bug'])
 		];
 		expect(summarise(tasks, new Date('2026-09-07T00:00:00Z')).detail).toBe(
-			'67% of them carry no tag at all'
+			'2 of the 3 carry no tag at all'
 		);
 	});
 
-	it('says when a repository has gone quiet', () => {
-		const tasks = [make('20260101-000001', 100, ['bug']), make('20260201-000001', 100, ['bug'])];
-		expect(summarise(tasks, new Date('2026-09-07T00:00:00Z')).detail).toBe(
-			'nothing new in seven months'
-		);
-	});
-
-	it('mentions how much is done when nothing else stands out', () => {
+	it('says how much is closed in whole tasks, not a percentage', () => {
 		const tasks = [
 			make('20260801-000001', 100, ['bug'], true),
 			make('20260801-000002', 100, ['bug'], true),
 			make('20260901-000001', 100, ['bug'])
 		];
 		expect(summarise(tasks, new Date('2026-09-07T00:00:00Z')).detail).toBe(
-			'67% of the work is already done'
+			'2 of the 3 are already closed'
 		);
 	});
 
@@ -180,5 +183,13 @@ describe('summarise', () => {
 
 	it('says "1 task", not "1 tasks"', () => {
 		expect(summarise([make('20260901-000001', 100, ['bug'])]).lead).toBe('1 task still open');
+	});
+
+	it('is meant for a whole repository, and says so', () => {
+		// Calling it on a subset would state something false about the calendar,
+		// which is why the dashboard shows the repository and the list filters.
+		expect(summarise(all, new Date('2026-09-07T00:00:00Z')).detail).toBe(
+			'no task was created in five of those ten months'
+		);
 	});
 });

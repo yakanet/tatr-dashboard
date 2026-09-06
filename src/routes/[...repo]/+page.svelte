@@ -1,60 +1,55 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
-	import QueryBar from '#lib/components/QueryBar.svelte';
 	import RepoStatus from '#lib/components/RepoStatus.svelte';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
 	import { renderInline } from '#lib/render/markdown.ts';
 	import { QUERY, type QueryState } from '#lib/state/query.svelte.ts';
 	import { REPOSITORY, type RepositoryState } from '#lib/state/repository.svelte.ts';
-	import { byMonth, byPriority, byTag, counts, summarise, topByPriority } from '#lib/tatr/stats.ts';
+	import {
+		byMonth,
+		byPriority,
+		byTag,
+		counts,
+		monthName,
+		summarise,
+		topByPriority
+	} from '#lib/tatr/stats.ts';
 
 	let { data } = $props();
 	const ref = $derived(data.ref);
 	const repo = getContext<RepositoryState>(REPOSITORY);
 	const query = getContext<QueryState>(QUERY);
 
-	// Every figure below is computed from the current query, so clicking a bar
-	// changes the whole page rather than one chart.
-	const selected = $derived(query.apply(repo.tasks));
-	const stats = $derived(counts(selected));
-	const summary = $derived(summarise(selected));
-	const priorities = $derived(byPriority(selected));
-	const tags = $derived(byTag(selected));
-	const months = $derived(byMonth(selected));
-	const top = $derived(topByPriority(selected.filter((task) => !task.closed), 8));
-	const pool = $derived(query.showClosed ? repo.tasks.length : repo.open.length);
+	// The dashboard is the whole repository at a glance. Filtering happens in the
+	// list; a chart that filtered itself would leave the reader on a picture to
+	// interpret instead of on the tasks they asked for.
+	const all = $derived(repo.tasks);
+	const stats = $derived(counts(all));
+	const summary = $derived(summarise(all));
+	const priorities = $derived(byPriority(all));
+	const tags = $derived(byTag(all));
+	const months = $derived(byMonth(all));
+	const top = $derived(topByPriority(all.filter((task) => !task.closed), 8));
 
 	const maxPriority = $derived(Math.max(1, ...priorities.map((bucket) => bucket.count)));
 	const maxTag = $derived(Math.max(1, ...tags.map((bucket) => bucket.count)));
 	const maxMonth = $derived(Math.max(1, ...months.map((bucket) => bucket.open + bucket.closed)));
 
-	function syncUrl() {
-		const url = new URL(page.url.href);
-		if (query.text.trim()) url.searchParams.set('q', query.text.trim());
-		else url.searchParams.delete('q');
-		if (query.showClosed) url.searchParams.set('closed', '1');
-		else url.searchParams.delete('closed');
-		replaceState(url, page.state);
-	}
-
+	/** Clicking a bar means "show me those tasks", so it opens the filtered list. */
 	function pick(term: string) {
-		query.toggle(term);
-		syncUrl();
+		query.text = term;
+		query.showClosed = true;
+		goto(
+			`${resolve('/[...repo]/list', { repo: formatRepoPath(ref) })}?q=${encodeURIComponent(term)}&closed=1`
+		);
 	}
 
 	const inline = (title: string, taskId: string) =>
 		renderInline(title, { ref, branch: repo.branch, taskId });
 	const taskHref = (id: string) =>
 		resolve('/[...repo]/task/[id]', { repo: formatRepoPath(ref), id });
-	const monthName = (month: string) => {
-		const [year, index] = month.split('-').map(Number);
-		const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-			'August', 'September', 'October', 'November', 'December'];
-		return `${names[index - 1]} ${year}`;
-	};
 	const monthLabel = (month: string) =>
 		['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][
 			Number(month.slice(5, 7)) - 1
@@ -64,8 +59,6 @@
 <svelte:head>
 	<title>{ref.owner}/{ref.name} — tatr dashboard</title>
 </svelte:head>
-
-<QueryBar {query} matched={selected.length} {pool} onchange={syncUrl} />
 
 <main>
 	<RepoStatus {repo} {ref} />
@@ -85,7 +78,7 @@
 			<div class="figures">
 				<div><strong>{stats.closed}</strong><span>closed</span></div>
 				<div><strong>{stats.untagged}</strong><span>untagged</span></div>
-				<div><strong>{stats.total}</strong><span>selected</span></div>
+				<div><strong>{stats.total}</strong><span>in total</span></div>
 			</div>
 		</section>
 
@@ -96,13 +89,13 @@
 					<span class="hint">higher is more urgent</span>
 				</header>
 				{#if priorities.length === 0}
-					<p class="empty">Nothing selected.</p>
+					<p class="empty">No tasks yet.</p>
 				{:else}
 					<ul class="bars">
 						{#each priorities as bucket (bucket.priority)}
 							{@const term = `priority eq ${bucket.priority}`}
 							<li>
-								<button class="row" class:on={query.has(term)} onclick={() => pick(term)}>
+								<button class="row" onclick={() => pick(term)}>
 									<span class="label mono">{bucket.priority}</span>
 									<span class="track">
 										<span class="fill" style:width="{(bucket.count / maxPriority) * 100}%"></span>
@@ -121,7 +114,7 @@
 					<span class="hint">click to filter</span>
 				</header>
 				{#if tags.length === 0}
-					<p class="empty">Nothing selected carries a tag.</p>
+					<p class="empty">No task carries a tag.</p>
 				{:else}
 					<ul class="bars">
 						{#each tags as bucket (bucket.tag)}
@@ -129,7 +122,6 @@
 							<li>
 								<button
 									class="row"
-									class:on={query.has(term)}
 									onclick={() => pick(term)}
 									title={repo.tags.descriptions.get(bucket.tag) ?? ''}
 								>
@@ -156,7 +148,7 @@
 				<span class="hint right">dates come from the folder names</span>
 			</header>
 			{#if months.length === 0}
-				<p class="empty">Nothing selected.</p>
+				<p class="empty">No tasks yet.</p>
 			{:else}
 				<div class="months">
 					{#each months as bucket (bucket.month)}
@@ -370,10 +362,6 @@
 
 	.row:hover {
 		background: var(--bg);
-	}
-
-	.row.on {
-		background: var(--accent-wash);
 	}
 
 	.label {

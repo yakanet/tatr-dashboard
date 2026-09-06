@@ -109,6 +109,17 @@ export function topByPriority(tasks: Task[], limit: number): Task[] {
 		.slice(0, limit);
 }
 
+const MONTH_NAMES = [
+	'January', 'February', 'March', 'April', 'May', 'June',
+	'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+/** `2026-03` as `March 2026`. */
+export function monthName(month: string): string {
+	const [year, index] = month.split('-').map(Number);
+	return `${MONTH_NAMES[index - 1]} ${year}`;
+}
+
 const WORDS = [
 	'no',
 	'one',
@@ -146,6 +157,15 @@ export interface Summary {
  * counters, so this picks the one fact worth leading with. Every candidate is
  * checked against the data — nothing here is a template with a number dropped
  * into it, and when nothing stands out the sentence simply stops.
+ *
+ * Each clause names what it counts. "Four of the last seven months" would be
+ * ambiguous twice over: the window is the span the tasks cover, not the seven
+ * months before today, and a bare "them" would seem to refer to the open tasks
+ * in the lead when the figure is over all of them.
+ *
+ * This describes a whole repository. Do not call it on a filtered subset: "no
+ * task was created in four of those months" is false about one, since tasks
+ * were created then, just not matching ones.
  */
 export function summarise(tasks: Task[], now = new Date()): Summary {
 	const { open, total, untagged } = counts(tasks);
@@ -162,38 +182,35 @@ export function summarise(tasks: Task[], now = new Date()): Summary {
 	const months = byMonth(tasks);
 	const empty = months.filter((month) => month.open + month.closed === 0).length;
 
-	// Quiet stretches say more about a repository than any average.
+	// A repository that has gone quiet is the most useful thing to lead with,
+	// and it is checked first because the other clauses would bury it.
+	const last = months.at(-1);
+	if (last) {
+		const [year, month] = last.month.split('-').map(Number);
+		const monthsSince = (now.getUTCFullYear() - year) * 12 + (now.getUTCMonth() + 1 - month);
+		if (monthsSince >= 3) {
+			return { lead, leadCount: open, detail: `nothing new since ${monthName(last.month)}` };
+		}
+	}
+
+	// Quiet stretches say more about a repository than any average. "Those N
+	// months" is the span the tasks cover, which the masthead states above it.
 	if (empty >= 2 && months.length >= 3) {
 		return {
 			lead,
 			leadCount: open,
-			detail: `nothing was written in ${inWords(empty)} of the last ${inWords(months.length)} months`
+			detail: `no task was created in ${inWords(empty)} of those ${inWords(months.length)} months`
 		};
 	}
 
 	// A repository whose tags are mostly absent cannot be filtered by them.
 	if (untagged * 2 > total) {
-		const percent = Math.round((untagged / total) * 100);
-		return { lead, leadCount: open, detail: `${percent}% of them carry no tag at all` };
+		return { lead, leadCount: open, detail: `${untagged} of the ${total} carry no tag at all` };
 	}
 
-	const last = months.at(-1);
-	if (last) {
-		const [year, month] = last.month.split('-').map(Number);
-		const monthsSince =
-			(now.getUTCFullYear() - year) * 12 + (now.getUTCMonth() + 1 - month);
-		if (monthsSince >= 3) {
-			return {
-				lead,
-				leadCount: open,
-				detail: `nothing new in ${inWords(monthsSince)} months`
-			};
-		}
-	}
-
-	const closedShare = total === 0 ? 0 : Math.round(((total - open) / total) * 100);
-	if (closedShare >= 60) {
-		return { lead, leadCount: open, detail: `${closedShare}% of the work is already done` };
+	const closed = total - open;
+	if (closed * 10 >= total * 6) {
+		return { lead, leadCount: open, detail: `${closed} of the ${total} are already closed` };
 	}
 
 	return { lead, leadCount: open, detail: null };
