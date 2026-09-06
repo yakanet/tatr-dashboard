@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
 	import { RepositoryState, describeAge, REPOSITORY } from '#lib/state/repository.svelte.ts';
+	import { QUERY, QueryState } from '#lib/state/query.svelte.ts';
 
 	let { data, children } = $props();
 	const ref = $derived(data.ref);
@@ -12,6 +13,12 @@
 	const repo = new RepositoryState();
 	setContext(REPOSITORY, repo);
 
+	// One query too: the charts filter the list and vice versa.
+	const query = new QueryState();
+	query.text = page.url.searchParams.get('q') ?? '';
+	query.showClosed = page.url.searchParams.get('closed') === '1';
+	setContext(QUERY, query);
+
 	$effect(() => {
 		const current = ref;
 		repo.load(current);
@@ -19,9 +26,19 @@
 	});
 
 	const path = $derived(formatRepoPath(ref));
+
+	/** The query travels with the link, so a filtered view stays shareable. */
+	const search = $derived.by(() => {
+		const params = new URLSearchParams();
+		if (query.text.trim()) params.set('q', query.text.trim());
+		if (query.showClosed) params.set('closed', '1');
+		const rendered = params.toString();
+		return rendered ? `?${rendered}` : '';
+	});
+
 	const views = $derived([
-		{ name: 'Overview', href: resolve('/[...repo]', { repo: path }) },
-		{ name: 'List', href: resolve('/[...repo]/list', { repo: path }) }
+		{ name: 'Overview', base: resolve('/[...repo]', { repo: path }) },
+		{ name: 'List', base: resolve('/[...repo]/list', { repo: path }) }
 	]);
 </script>
 
@@ -30,8 +47,8 @@
 	<span class="repo">{path}</span>
 
 	<nav>
-		{#each views as view (view.href)}
-			<a href={view.href} class:current={page.url.pathname === view.href}>{view.name}</a>
+		{#each views as view (view.base)}
+			<a href={view.base + search} class:current={page.url.pathname === view.base}>{view.name}</a>
 		{/each}
 	</nav>
 
