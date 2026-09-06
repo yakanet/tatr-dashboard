@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: ui
+- TAGS: scope,ui
 
 One unique URL per repository: `/{owner}/{name}`, with an optional forge host
 prefix and an `@branch` suffix. Already implemented and tested in
