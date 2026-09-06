@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: ui,tql
+- TAGS: scope,ui,tql
 
 The query is global state and every chart is both a visualisation and a
 control: clicking a tag bar appends `:bug` to the query, everything recomputes,

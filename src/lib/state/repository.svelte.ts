@@ -11,6 +11,9 @@ import type { RepoRef } from '../repo/ref.ts';
 import type { Task } from '../tatr/task.ts';
 import type { TagDescriptions } from '../tatr/tags-file.ts';
 
+/** Context key for the repository shared by every view of one repository. */
+export const REPOSITORY = Symbol('repository');
+
 export type Phase = 'idle' | 'listing' | 'reading' | 'ready' | 'failed';
 
 export interface Failure {
