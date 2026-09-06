@@ -12,3 +12,7 @@ The format offers only four dimensions — binary status, numeric priority, tags
 creation date from the HUID. There are no closure dates, so burndown, cycle time
 and "closed this month" are impossible. The activity chart plots creations split
 by present status; anything else would be invented.
+
+---
+
+Needs the routing from 20260906-211206.

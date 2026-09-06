@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 110
-- TAGS: data
+- TAGS: scope,data
 
 Measured on 2026-09-06:
 
@@ -18,3 +18,7 @@ for 64 tasks.
 Cache the tree by ETag in localStorage; a 304 costs no quota. Fall back to
 jsDelivr when the budget is spent — it can both list and serve, though its cache
 lagged by one task when measured.
+
+---
+
+Needs the parser from 20260906-211152.

@@ -11,3 +11,7 @@ prefix and an `@branch` suffix. Already implemented and tested in
 What is left is the loading, empty and error states: progressive loading (the
 tree arrives before the files), rate-limit exhausted, no `tasks/` folder, and
 unparsable task files listed rather than dropped.
+
+---
+
+Needs the data source from 20260906-211159.

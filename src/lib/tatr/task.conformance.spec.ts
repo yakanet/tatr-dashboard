@@ -1,0 +1,85 @@
+import { describe, expect, it } from 'vitest';
+import cliOutput from '../../../tests/fixtures/tatr-ls-output.json' with { type: 'json' };
+import rawTasks from '../../../tests/fixtures/tsoding-tatr-raw.json' with { type: 'json' };
+import { compareByPriority, readTask } from './task.ts';
+
+/**
+ * Differential test of the parser against the reference implementation.
+ *
+ * `tsoding-tatr-raw.json` holds the 64 `TASK.md` files of tsoding/tatr verbatim;
+ * `tatr-ls-output.json` holds what the compiled `tatr ls` binary printed for the
+ * same folder. Every field the CLI shows — status, priority, tags, title — is
+ * re-derived here and compared, so a divergence from the C parser fails the suite.
+ *
+ * To regenerate: build tatr, then run `tatr ls` and `tatr ls -c` in its checkout.
+ */
+interface CliRow {
+	id: string;
+	status: string;
+	priority: number;
+	tags: string[];
+	title: string;
+}
+
+const rows = cliOutput as CliRow[];
+const sources = rawTasks as Record<string, string>;
+
+describe('conformance with the tatr parser', () => {
+	it('covers the whole repository', () => {
+		expect(rows).toHaveLength(64);
+		expect(Object.keys(sources)).toHaveLength(64);
+	});
+
+	it.each(rows)('$id parses to what the CLI prints', (row) => {
+		const task = readTask(row.id, sources[row.id]);
+		expect(task).not.toBeNull();
+		expect(task!.title).toBe(row.title);
+		expect(task!.status).toBe(row.status);
+		expect(task!.priority).toBe(row.priority);
+		expect(task!.tags).toEqual(row.tags);
+	});
+
+	it('agrees on which tasks are closed', () => {
+		const mine = Object.entries(sources)
+			.map(([id, source]) => readTask(id, source)!)
+			.filter((task) => task.closed)
+			.map((task) => task.id)
+			.sort();
+		const theirs = rows
+			.filter((row) => row.status === 'CLOSED')
+			.map((row) => row.id)
+			.sort();
+		expect(mine).toEqual(theirs);
+	});
+
+	it('parses every file without falling back to the invalid title', () => {
+		const malformed = Object.entries(sources)
+			.map(([id, source]) => readTask(id, source)!)
+			.filter((task) => task.malformed);
+		expect(malformed).toEqual([]);
+	});
+
+	it('finds properties beyond the documented three', () => {
+		const keys = new Set<string>();
+		for (const [id, source] of Object.entries(sources)) {
+			for (const key of readTask(id, source)!.properties.keys()) keys.add(key);
+		}
+		expect([...keys].sort()).toEqual(['PRIORITY', 'STATUS', 'TAGS']);
+	});
+
+	it('reads a creation date for every task, straight from its id', () => {
+		const tasks = Object.entries(sources).map(([id, source]) => readTask(id, source)!);
+		expect(tasks.every((task) => !Number.isNaN(task.created.getTime()))).toBe(true);
+		const earliest = tasks.reduce((a, b) => (a.created < b.created ? a : b));
+		expect(earliest.id).toBe('20251205-071347');
+	});
+
+	it('sorts by priority descending, as the CLI does by default', () => {
+		const open = Object.entries(sources)
+			.map(([id, source]) => readTask(id, source)!)
+			.filter((task) => !task.closed)
+			.sort(compareByPriority);
+		expect(open[0].priority).toBe(110);
+		expect(open.at(-1)!.priority).toBe(10);
+	});
+});

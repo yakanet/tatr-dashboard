@@ -13,3 +13,7 @@ This matches the conclusion of upstream task 20260826-200847: "Maybe if the
 people want to kanban this entire thing they should just use tags for that?"
 
 Read-only, so cards cannot be dragged.
+
+---
+
+Reuses the row and detail work from 20260906-211220.

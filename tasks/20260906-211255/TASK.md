@@ -10,3 +10,7 @@ API and a raw endpoint, so the shape should transfer.
 
 Not urgent — no one has asked, and GitHub covers the case that motivated the
 project.
+
+---
+
+Extends the provider abstraction from 20260906-211159.
