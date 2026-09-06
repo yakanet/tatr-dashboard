@@ -57,6 +57,57 @@ export function parseHuid(id: string): Huid | null {
 	return suffix ? { id, created, suffix } : { id, created };
 }
 
+const isDigit = (c: string) => c >= '0' && c <= '9';
+const isAlnumOrDash = (c: string) =>
+	c === '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+
+/**
+ * Reads a HUID starting at `start`, returning the index just past it, or `-1`.
+ *
+ * A direct port of `chop_huid` in `src/huid.c`, whose shape matters more than it
+ * looks: it recognises an id *anywhere*, with no word boundary, so a HUID glued
+ * to the preceding word still counts. Its digit loops also stop at the end of
+ * the text, so a truncated id at the very end is accepted — harmless, because
+ * every caller then checks that the task exists.
+ */
+function chopHuid(text: string, start: number): number {
+	let i = start;
+	for (let n = 0; i < text.length && n < 8; n++) {
+		if (!isDigit(text[i])) return -1;
+		i++;
+	}
+	if (text[i] !== '-') return -1;
+	i++;
+	for (let n = 0; i < text.length && n < 6; n++) {
+		if (!isDigit(text[i])) return -1;
+		i++;
+	}
+	if (text[i] === '-') {
+		while (i < text.length && isAlnumOrDash(text[i])) i++;
+	}
+	return i;
+}
+
+/**
+ * Every HUID appearing in a text, in order and with repeats, the way the
+ * reference implementation scans a `TASK.md`: try to read an id at the cursor,
+ * and advance by a single character when that fails.
+ */
+export function scanHuids(text: string): string[] {
+	const found: string[] = [];
+	let i = 0;
+	while (i < text.length) {
+		const end = chopHuid(text, i);
+		if (end === -1) {
+			i += 1;
+		} else {
+			found.push(text.slice(i, end));
+			i = end;
+		}
+	}
+	return found;
+}
+
 /** Formats an instant as a HUID, the way `tatr new` does. */
 export function formatHuid(date: Date, suffix?: string): string {
 	const pad = (n: number, width = 2) => String(n).padStart(width, '0');

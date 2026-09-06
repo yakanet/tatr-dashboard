@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHuid, isValidHuid, parseHuid } from './huid.ts';
+import { formatHuid, isValidHuid, parseHuid, scanHuids } from './huid.ts';
 
 describe('parseHuid', () => {
 	it('reads the timestamp as UTC', () => {
@@ -66,5 +66,41 @@ describe('formatHuid', () => {
 		expect(formatHuid(new Date(Date.UTC(2026, 0, 2, 3, 4, 5)), 'rexim')).toBe(
 			'20260102-030405-rexim'
 		);
+	});
+});
+
+describe('scanHuids', () => {
+	it('reads ids out of prose, in order and with repeats', () => {
+		expect(scanHuids('see 20260101-000001, then 20260101-000002 and 20260101-000001')).toEqual([
+			'20260101-000001',
+			'20260101-000002',
+			'20260101-000001'
+		]);
+	});
+
+	it('reads the wrappers the format uses', () => {
+		expect(scanHuids('TASK(20260101-000001) and ## NOTE(20260101-000002)')).toEqual([
+			'20260101-000001',
+			'20260101-000002'
+		]);
+	});
+
+	it('keeps a team suffix', () => {
+		expect(scanHuids('20260101-000001-rexim')).toEqual(['20260101-000001-rexim']);
+	});
+
+	it('needs no word boundary, as the C scanner has none', () => {
+		expect(scanHuids('abc20260101-000001')).toEqual(['20260101-000001']);
+	});
+
+	it('finds nothing in a text without ids', () => {
+		expect(scanHuids('2026-01-01 is not one, nor is 20260101')).toEqual([]);
+	});
+
+	it('resumes just past an id, so two glued ids both count', () => {
+		expect(scanHuids('20260101-00000120260101-000002')).toEqual([
+			'20260101-000001',
+			'20260101-000002'
+		]);
 	});
 });

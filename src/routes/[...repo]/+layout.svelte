@@ -38,19 +38,25 @@
 
 	const views = $derived([
 		{ name: 'Overview', base: resolve('/[...repo]', { repo: path }) },
-		{ name: 'List', base: resolve('/[...repo]/list', { repo: path }) }
+		{ name: 'List', base: resolve('/[...repo]/list', { repo: path }) },
+		{ name: 'References', base: resolve('/[...repo]/graph', { repo: path }) }
 	]);
 </script>
 
 <header>
-	<a class="brand" href={resolve('/')}>tatr</a>
-	<span class="repo">{path}</span>
+	<!-- Brand, path and views are set at three sizes, so they are grouped and
+	     aligned on their shared baseline: centring them instead lines up the
+	     middle of each box, which leaves the smaller type sitting low. -->
+	<div class="identity">
+		<a class="brand" href={resolve('/')}>tatr</a>
+		<span class="repo">{path}</span>
 
-	<nav>
-		{#each views as view (view.base)}
-			<a href={view.base + search} class:current={page.url.pathname === view.base}>{view.name}</a>
-		{/each}
-	</nav>
+		<nav>
+			{#each views as view (view.base)}
+				<a href={view.base + search} class:current={page.url.pathname === view.base}>{view.name}</a>
+			{/each}
+		</nav>
+	</div>
 
 	<span class="spacer"></span>
 
@@ -75,6 +81,12 @@
 		padding: 0 1.5rem;
 		border-bottom: 1px solid var(--border);
 		background: var(--surface);
+	}
+
+	.identity {
+		display: flex;
+		align-items: baseline;
+		gap: 1rem;
 	}
 
 	.brand {

@@ -39,6 +39,7 @@ someone else and land them exactly there.
 | `/yakanet/tatr-dashboard@main` | the same repository, pinned to a branch by name |
 | `/yakanet/tatr-dashboard/list?q=:ui` | the task list, filtered |
 | `/yakanet/tatr-dashboard/task/20260906-211234` | one task, rendered |
+| `/yakanet/tatr-dashboard/graph` | which tasks cite which |
 
 Nothing to sign in to, nothing to configure, no repository to register first.
 
@@ -160,9 +161,8 @@ ui , screens, interaction and styling
 infra , build, deploy and tooling
 ```
 
-Next up: a cross-reference graph built from the task ids that tasks mention, a
-board whose columns come from tags, keyboard navigation across every view,
-self-hosted webfonts, and forges beyond GitHub.
+Next up: a board whose columns come from tags, keyboard navigation across every
+view, self-hosted webfonts, and forges beyond GitHub.
 
 ## Credits
 

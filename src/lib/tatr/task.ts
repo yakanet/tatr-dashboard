@@ -2,17 +2,23 @@
  * Assembles a task from its folder name and its `TASK.md`, and orders tasks the
  * way the CLI does.
  */
-import { parseHuid } from './huid.ts';
+import { parseHuid, scanHuids } from './huid.ts';
 import { isClosed, parseTaskMd, readPriority, readTags } from './task-md.ts';
 
-/** HUIDs as they appear inside prose: bare, or wrapped as `TASK(...)`. */
-const REFERENCE = /\b(\d{8}-\d{6}(?:-[A-Za-z0-9-]+)?)\b/g;
-
-/** Task ids mentioned in a body, minus the task's own. */
+/**
+ * Task ids mentioned in a body, deduplicated and sorted, minus the task's own.
+ *
+ * Ids appear bare, wrapped as `TASK(...)`, and as the timestamp of a journal
+ * entry in `NOTE(...)`. The reference implementation makes no distinction
+ * between those: it scans the whole file and keeps whatever looks like an id.
+ * What separates a real reference from a note's timestamp is that only the
+ * former names a task that exists, which is a question for the caller holding
+ * the repository — see `buildGraph`.
+ */
 export function extractReferences(body: string, selfId?: string): string[] {
 	const found = new Set<string>();
-	for (const match of body.matchAll(REFERENCE)) {
-		if (match[1] !== selfId) found.add(match[1]);
+	for (const id of scanHuids(body)) {
+		if (id !== selfId) found.add(id);
 	}
 	return [...found].sort();
 }

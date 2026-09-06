@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 90
-- TAGS: ui
+- TAGS: scope,ui
 
 Columns come from tags rather than status, since status has only two values.
 The `scope` tag means "currently working on" upstream, which makes a real
