@@ -9,6 +9,7 @@
 	import { renderInline } from '#lib/render/markdown.ts';
 	import { QUERY, type QueryState } from '#lib/state/query.svelte.ts';
 	import { REPOSITORY, type RepositoryState } from '#lib/state/repository.svelte.ts';
+	import { byTag } from '#lib/tatr/stats.ts';
 	import type { Task } from '#lib/tatr/task.ts';
 
 	let { data } = $props();
@@ -24,6 +25,16 @@
 			.toSorted((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))
 	);
 	const pool = $derived(query.showClosed ? repo.tasks.length : repo.open.length);
+
+	// Counted over what the reader is actually looking at, so the tally beside a
+	// tag agrees with the list they get by picking it.
+	const tagOptions = $derived(
+		byTag(query.showClosed ? repo.tasks : repo.open).map(({ tag, count }) => ({
+			name: tag,
+			description: repo.tags.descriptions.get(tag),
+			count
+		}))
+	);
 
 	function syncUrl() {
 		const url = new URL(page.url.href);
@@ -50,7 +61,7 @@
 	<title>{ref.owner}/{ref.name} — list</title>
 </svelte:head>
 
-<QueryBar {query} matched={visible.length} {pool} onchange={syncUrl} />
+<QueryBar {query} matched={visible.length} {pool} tags={tagOptions} onchange={syncUrl} />
 
 <main>
 	<RepoStatus {repo} {ref} />

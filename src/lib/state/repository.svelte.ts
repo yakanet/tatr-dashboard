@@ -98,14 +98,25 @@ function describe(error: unknown): Failure {
 	return { kind: 'unknown', message: error instanceof Error ? error.message : 'Something went wrong' };
 }
 
-/** "just now", "12 minutes ago", "3 hours ago" — for the refresh control. */
+/**
+ * The wording is `Intl`'s, so plurals are not spelled out here. `numeric:
+ * 'always'` rather than `'auto'`, which turns one day into "yesterday" — a
+ * cache reads better on one scale throughout.
+ */
+const RELATIVE = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
+
+/**
+ * "just now", "12 minutes ago", "3 hours ago" — for the refresh control.
+ *
+ * The thresholds are the part worth having: `Intl` formats a number and a unit,
+ * it does not choose them, and "just now" is not a unit it knows.
+ */
 export function describeAge(storedAt: number, now = Date.now()): string {
 	const seconds = Math.max(0, Math.round((now - storedAt) / 1000));
 	if (seconds < 45) return 'just now';
 	const minutes = Math.round(seconds / 60);
-	if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+	if (minutes < 60) return RELATIVE.format(-minutes, 'minute');
 	const hours = Math.round(minutes / 60);
-	if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-	const days = Math.round(hours / 24);
-	return `${days} day${days === 1 ? '' : 's'} ago`;
+	if (hours < 24) return RELATIVE.format(-hours, 'hour');
+	return RELATIVE.format(-Math.round(hours / 24), 'day');
 }
