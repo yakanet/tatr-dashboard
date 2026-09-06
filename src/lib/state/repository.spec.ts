@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { describeAge } from './repository.svelte.ts';
 
+/**
+ * The wording comes from `Intl`, so what is worth pinning here are the
+ * thresholds and the rounding: `Intl` formats a number and a unit, it does not
+ * pick them, and "just now" is not a unit it knows.
+ */
+
 const NOW = 1_000_000_000;
 const ago = (ms: number) => describeAge(NOW - ms, NOW);
 
