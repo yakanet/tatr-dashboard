@@ -74,8 +74,6 @@ export const github: Provider = {
 			entries: body.tree
 				.filter((entry) => entry.type === 'blob')
 				.map((entry) => (entry.size === undefined ? { path: entry.path } : { path: entry.path, size: entry.size })),
-			source: NAME,
-			mayBeStale: false,
 			branch
 		};
 	}

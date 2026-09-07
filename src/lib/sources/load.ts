@@ -46,9 +46,6 @@ export interface LoadResult {
 	/** Files under `tasks/` that could not be parsed, listed rather than dropped. */
 	skipped: { id: string; reason: string }[];
 	tags: TagDescriptions;
-	/** Which provider listed the repository. */
-	source: string;
-	mayBeStale: boolean;
 	fromCache: boolean;
 	/** When this view of the repository was fetched, in epoch milliseconds. */
 	storedAt: number;
@@ -200,8 +197,6 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 	const payload: CachedLoad = {
 		...assemble(contents, attachments),
 		tags: parseTagsFile(tagsFile ?? ''),
-		source: listing.source,
-		mayBeStale: listing.mayBeStale,
 		branch: listing.branch,
 		previous: seen ? snapshot(seen.value.tasks, seen.storedAt) : null
 	};

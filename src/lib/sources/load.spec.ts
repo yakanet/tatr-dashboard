@@ -23,8 +23,6 @@ function fakeProvider(name: string, overrides: Partial<Listing> = {}): Provider 
 				{ path: 'tasks/tags' },
 				{ path: 'README.md' }
 			],
-			source: name,
-			mayBeStale: false,
 			branch: 'HEAD',
 			...overrides
 		})
@@ -61,16 +59,30 @@ beforeEach(() => {
 });
 
 describe('provider fallback', () => {
-	it('uses the first provider that answers', async () => {
-		const listing = await listRepository(ref, { providers: [fakeProvider('github')] });
-		expect(listing.source).toBe('github');
+	// A listing no longer says who produced it, so the question is put to the
+	// providers themselves — which is the stronger form of it anyway: that the
+	// second was asked, rather than that the answer carries its name.
+	it('stops at the first provider that answers', async () => {
+		const first = fakeProvider('github');
+		const second = fakeProvider('ungh');
+		const spy = vi.spyOn(second, 'list');
+
+		const listing = await listRepository(ref, { providers: [first, second] });
+
+		expect(listing.entries.length).toBeGreaterThan(0);
+		expect(spy).not.toHaveBeenCalled();
 	});
 
 	it('falls through when the budget is spent', async () => {
+		const second = fakeProvider('ungh');
+		const spy = vi.spyOn(second, 'list');
+
 		const listing = await listRepository(ref, {
-			providers: [failing('github', 'rate-limited'), fakeProvider('ungh')]
+			providers: [failing('github', 'rate-limited'), second]
 		});
-		expect(listing.source).toBe('ungh');
+
+		expect(spy).toHaveBeenCalled();
+		expect(listing.entries.length).toBeGreaterThan(0);
 	});
 
 	it('does not ask the others when the repository does not exist', async () => {
@@ -80,13 +92,6 @@ describe('provider fallback', () => {
 			listRepository(ref, { providers: [failing('github', 'not-found'), second] })
 		).rejects.toThrow(ProviderError);
 		expect(spy).not.toHaveBeenCalled();
-	});
-
-	it('reports staleness so the UI can say so', async () => {
-		const listing = await listRepository(ref, {
-			providers: [fakeProvider('a cached mirror', { mayBeStale: true })]
-		});
-		expect(listing.mayBeStale).toBe(true);
 	});
 
 	it('rethrows when every provider fails', async () => {
@@ -153,7 +158,7 @@ describe('loadRepository', () => {
 	it('refuses a repository with no tasks folder', async () => {
 		const bare: Provider = {
 			name: 'github',
-			list: async () => ({ entries: [{ path: 'README.md' }], source: 'github', mayBeStale: false, branch: 'HEAD' })
+			list: async () => ({ entries: [{ path: 'README.md' }], branch: 'HEAD' })
 		};
 		await expect(
 			loadRepository(ref, { providers: [bare], fetchImpl: fetchFixture, store })
@@ -340,8 +345,6 @@ function mutable(files: Record<string, string>) {
 		name: 'github',
 		list: async () => ({
 			entries: Object.keys(files).map((id) => ({ path: `tasks/${id}/TASK.md`, size: 1 })),
-			source: 'github',
-			mayBeStale: false,
 			branch: 'HEAD'
 		})
 	};

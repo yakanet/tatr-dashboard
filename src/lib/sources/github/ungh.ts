@@ -47,8 +47,6 @@ export const ungh: Provider = {
 			entries: body.files.map((file) =>
 				file.size === undefined ? { path: file.path } : { path: file.path, size: file.size }
 			),
-			source: NAME,
-			mayBeStale: false,
 			// ungh resolves HEAD itself; we only know the branch when it was given.
 			branch: ref.branch ?? 'HEAD'
 		};

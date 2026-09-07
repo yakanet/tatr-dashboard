@@ -102,8 +102,6 @@ export const localKind: SourceKind = {
 				}
 				return {
 					entries: listFolder(open),
-					source: 'this machine',
-					mayBeStale: false,
 					branch: (await readBranch(open)) ?? 'working tree'
 				};
 			},

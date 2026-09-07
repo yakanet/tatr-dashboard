@@ -31,13 +31,10 @@ export class RepositoryState {
 	/** Files read so far, and how many there are, for the progress bar. */
 	done = $state(0);
 	total = $state(0);
-	/** Which provider answered, and whether it serves a cached view. */
-	source = $state('');
 	/** What the reading calls itself: `owner/name`, or the folder's own name. */
 	label = $state('');
 	/** What is being read, kept so a view can name it before there is a reading. */
 	ref = $state<RepoRef | null>(null);
-	mayBeStale = $state(false);
 	fromCache = $state(false);
 	storedAt = $state(0);
 	branch = $state('HEAD');
@@ -121,9 +118,7 @@ export class RepositoryState {
 			this.tasks = result.tasks;
 			this.skipped = result.skipped;
 			this.tags = result.tags;
-			this.source = result.source;
 			this.label = result.label;
-			this.mayBeStale = result.mayBeStale;
 			this.fromCache = result.fromCache;
 			this.storedAt = result.storedAt;
 			this.branch = result.branch;

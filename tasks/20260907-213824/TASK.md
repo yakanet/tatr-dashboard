@@ -67,3 +67,29 @@ cleanup. It also depends on a bigger one: ungh going too would leave a single
 lister, and with it `Provider`, `PROVIDERS` and the fallback loop would all have
 nothing left to do.
 
+---
+
+The pair is out: `Listing.source`, `Listing.mayBeStale`, the two fields they fed
+in `LoadResult`, the two in the repository state, and the header clause that was
+their only reader. A `Listing` is now entries and a branch.
+
+Nothing on screen changed, which was the test of whether the removal was safe:
+no lister could set staleness, so the clause could not render, so `source` was
+never printed.
+
+Provenance survives where it is actually useful. A *failure* still names the
+lister that produced it, through `ProviderError`, and `forge.spec.ts` pins that
+the forge — not whichever lister was asked last — is what refuses an unknown
+host. It is success that had nobody to tell.
+
+The fallback tests had to find another observable, and got a better one: they
+spy on the providers instead of reading a name off the answer. That the second
+lister *was asked* — or was not — is the actual claim, where a label was only
+its shadow. Both directions were proved to bite: never falling through fails
+one, asking everybody fails the other.
+
+Left in place and flagged: `Provider.name` is now read by nothing. Removing it
+means touching 28 call sites in one spec for a single line, and it is where the
+interface says what a lister is, so it stays until someone would rather have the
+line back than the churn.
+
