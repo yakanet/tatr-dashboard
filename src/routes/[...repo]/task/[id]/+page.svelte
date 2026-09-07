@@ -98,8 +98,12 @@
 			{:else}
 				<div class="journal">
 					{#each entries as entry, index (index)}
-						<div class="entry">
-							<span class="bullet" class:latest={index === entries.length - 1}></span>
+						<div
+							class="entry"
+							class:first={index === 0}
+							class:last={index === entries.length - 1}
+						>
+							<span class="bullet"></span>
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							<div class="prose">{@html render(entry)}</div>
 						</div>
@@ -243,9 +247,52 @@
 		flex-direction: column;
 	}
 
+	/*
+	 * A body is a journal: the original description, then whatever was appended
+	 * after it, split on `---`. The bullets mark where each entry starts and the
+	 * rule joins them, so the shape says "added over time" on its own.
+	 *
+	 * They are deliberately all the same colour. Highlighting the last one coded
+	 * nothing the reader could not already see — it is the one at the bottom —
+	 * and a colour that carries no meaning still asks to be decoded. Dating them
+	 * instead is not an option here: not one of the 97 journal entries in
+	 * tsoding/tatr carries a date. The `## NOTE(<huid>)` headings that do are a
+	 * different convention, written inside a body rather than between entries,
+	 * and markdown already renders them.
+	 */
 	.entry {
 		display: flex;
 		gap: 1rem;
+		position: relative;
+		/* Where a bullet's centre sits: its top margin plus half its height. */
+		--bullet-mid: calc(0.65rem + 3.5px);
+	}
+
+	/* The rule runs the height of every entry, so it reaches the end of the text
+	   rather than stopping at the last bullet — which read as unfinished whenever
+	   the last entry was long. It starts at the first bullet's centre, since
+	   nothing precedes it there. */
+	.entry::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 3px;
+		width: 1px;
+		/* The bullets' own colour: `--border` disappears against the card in dark
+		   mode, being a step away from the surface it sits on. At 1px against a
+		   7px dot it still reads as the lighter of the two. */
+		background: var(--baseline);
+	}
+
+	.entry.first::before {
+		top: var(--bullet-mid);
+	}
+
+	/* A single entry is not a sequence, so it gets no rule at all — a line down
+	   the side of one block reads as a quotation, not as a journal. */
+	.entry.first.last::before {
+		display: none;
 	}
 
 	.bullet {
@@ -255,10 +302,10 @@
 		margin-top: 0.65rem;
 		border-radius: 50%;
 		background: var(--baseline);
-	}
-
-	.bullet.latest {
-		background: var(--accent);
+		/* Above the rule, and it paints over the piece running behind it. */
+		position: relative;
+		z-index: 1;
+		box-shadow: 0 0 0 3px var(--surface);
 	}
 
 	.prose {
