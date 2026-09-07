@@ -1,0 +1,62 @@
+[
+ {
+  "query": ":",
+  "exit": 1,
+  "stderr": ":\n^\nERROR: empty tag"
+ },
+ {
+  "query": "priority and",
+  "exit": 1,
+  "stderr": "What are primary expressions:\n\n    :<tag>         - checks if task has a tag\n    [ <expr> ]     - same as previous but for Bash users\n    not <primary>  - negation of a primary expression\n    any            - expression that always returns true\n    tagged         - checks if a task is tagged\n    priority       - priority of a task as an integer\n    <number>       - signed integer\n\npriority and\n            ^\nERROR: Primary expression is expected here."
+ },
+ {
+  "query": "priority lt",
+  "exit": 1,
+  "stderr": "What are primary expressions:\n\n    :<tag>         - checks if task has a tag\n    [ <expr> ]     - same as previous but for Bash users\n    not <primary>  - negation of a primary expression\n    any            - expression that always returns true\n    tagged         - checks if a task is tagged\n    priority       - priority of a task as an integer\n    <number>       - signed integer\n\npriority lt\n           ^\nERROR: Primary expression is expected here."
+ },
+ {
+  "query": "nope",
+  "exit": 1,
+  "stderr": "What are primary expressions:\n\n    :<tag>         - checks if task has a tag\n    [ <expr> ]     - same as previous but for Bash users\n    not <primary>  - negation of a primary expression\n    any            - expression that always returns true\n    tagged         - checks if a task is tagged\n    priority       - priority of a task as an integer\n    <number>       - signed integer\n\nnope\n^\nERROR: Unexpected start of a primary expression `nope`."
+ },
+ {
+  "query": "]",
+  "exit": 1,
+  "stderr": "What are primary expressions:\n\n    :<tag>         - checks if task has a tag\n    [ <expr> ]     - same as previous but for Bash users\n    not <primary>  - negation of a primary expression\n    any            - expression that always returns true\n    tagged         - checks if a task is tagged\n    priority       - priority of a task as an integer\n    <number>       - signed integer\n\n]\n^\nERROR: Unexpected start of a primary expression `]`."
+ },
+ {
+  "query": "[",
+  "exit": 1,
+  "stderr": "What are primary expressions:\n\n    :<tag>         - checks if task has a tag\n    [ <expr> ]     - same as previous but for Bash users\n    not <primary>  - negation of a primary expression\n    any            - expression that always returns true\n    tagged         - checks if a task is tagged\n    priority       - priority of a task as an integer\n    <number>       - signed integer\n\n[\n ^\nERROR: Primary expression is expected here."
+ },
+ {
+  "query": "[:bug",
+  "exit": 1,
+  "stderr": "[:bug\n     ^\nERROR: Expected `]`."
+ },
+ {
+  "query": ":bug not :ui",
+  "exit": 1,
+  "stderr": "Supported infix operators:\n\n    and  or                  - logical operators\n    lt  le  gt  ge  eq  ne   - comparison operators\n\n:bug not :ui\n     ^\nERROR: Unexpected infix operator `not`"
+ },
+ {
+  "query": ":bug]",
+  "exit": 1,
+  "stderr": "Supported infix operators:\n\n    and  or                  - logical operators\n    lt  le  gt  ge  eq  ne   - comparison operators\n\n:bug]\n    ^\nERROR: Unexpected infix operator `]`"
+ },
+ {
+  "query": "5",
+  "exit": 1,
+  "stderr": "5\n^\nERROR: Expected boolean but got integer"
+ },
+ {
+  "query": ":bug and 5",
+  "exit": 1,
+  "stderr": ":bug and 5\n         ^\nERROR: Expected boolean but got integer"
+ },
+ {
+  "query": ".bug",
+  "exit": 0,
+  "stderr": ".bug\n^\nWARNING: Using `.` to refer to tags is deprecated and will be removed in the future. Use `:` instead."
+ }
+]

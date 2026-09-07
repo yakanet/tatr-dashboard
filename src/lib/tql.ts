@@ -204,7 +204,8 @@ export function parseWithWarnings(source: string): ParseResult {
 		if (token.text.startsWith(':') || token.text.startsWith('.')) {
 			if (token.text.startsWith('.')) {
 				warnings.push({
-					message: 'Using `.` to refer to tags is deprecated. Use `:` instead.',
+					message:
+						'Using `.` to refer to tags is deprecated and will be removed in the future. Use `:` instead.',
 					span: token.span
 				});
 			}
@@ -374,9 +375,31 @@ export function evaluate(node: Node, task: TqlTask): boolean {
  * Parses once and returns a predicate. Prefer this when filtering a list, so the
  * query is not re-parsed per task.
  */
+/**
+ * A stand-in task, so `compile` can settle the types before anything real is
+ * matched.
+ *
+ * The language is typed but its checks run during evaluation, so `priority`
+ * parses and compiles perfectly — an integer where a boolean is required — and
+ * without this the error would surface from the matcher, one task in, wherever
+ * that happens to be called from. It cost a page a 500 once already.
+ *
+ * One witness settles every branch, because `and` and `or` evaluate both sides
+ * before testing either, exactly as the C implementation does. No branch can
+ * hide behind a short circuit that never happens.
+ */
+const WITNESS: TqlTask = { tags: [], priority: 0, title: '' };
+
+/**
+ * Compiles a query into a matcher, throwing {@link TqlError} for a syntax *or* a
+ * type error — the caller cannot tell the difference apart, and should not have
+ * to remember that one of the two arrives later than the other.
+ */
 export function compile(source: string): (task: TqlTask) => boolean {
 	const node = parse(source);
-	return (task) => evaluate(node, task);
+	const match = (task: TqlTask) => evaluate(node, task);
+	match(WITNESS);
+	return match;
 }
 
 /**
@@ -390,7 +413,10 @@ export function compile(source: string): (task: TqlTask) => boolean {
  * The CLI's `ERROR: ` prefix is left off, being what separates a message from
  * ordinary output on a terminal. Here the diagnostic has a panel of its own.
  */
-export function formatDiagnostic(source: string, error: TqlError): string {
+export function formatDiagnostic(
+	source: string,
+	error: { message: string; span: Span; help?: string }
+): string {
 	const caret = `${' '.repeat(error.span.start)}^`;
 	const body = `${source}\n${caret}\n${error.message}`;
 	return error.help ? `${error.help}\n\n${body}` : body;

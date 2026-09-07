@@ -6,25 +6,10 @@
  * the counts and the other charts at once. Keeping it in the URL means a
  * filtered view is a link someone can send.
  */
-import { compile, parseWithWarnings, TqlError, type TqlTask, type TqlWarning } from '../tql.ts';
+import { compile, parseWithWarnings, TqlError, type TqlWarning } from '../tql.ts';
 import type { Task } from '../tatr/task.ts';
 
 export const QUERY = Symbol('query');
-
-/**
- * A stand-in task, used to surface type errors while compiling.
- *
- * The query language is typed, but its checks run during evaluation rather than
- * during parsing: `priority` parses perfectly and yields an integer where a
- * boolean is required, so `compile` accepts it and the error only appears once a
- * real task goes through — in the middle of rendering, where it takes the page
- * down instead of being reported.
- *
- * One witness catches every such error, because `and` and `or` evaluate both
- * sides before testing either, exactly as the C implementation does. No branch
- * can hide behind a short circuit that never happens.
- */
-const WITNESS: TqlTask = { tags: [], priority: 0, title: '' };
 
 export class QueryState {
 	text = $state('');
@@ -37,9 +22,7 @@ export class QueryState {
 			return { match: () => true, error: null as TqlError | null, warnings: [] as TqlWarning[] };
 		}
 		try {
-			const match = compile(source);
-			match(WITNESS);
-			return { match, error: null, warnings: parseWithWarnings(source).warnings };
+			return { match: compile(source), error: null, warnings: parseWithWarnings(source).warnings };
 		} catch (error) {
 			// An incomplete or ill-typed query is the normal state while typing, so
 			// it filters nothing rather than emptying the screen under the reader.
