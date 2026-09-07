@@ -178,7 +178,7 @@
 </div>
 
 {#if query.error}
-	<pre class="diagnostic">{formatDiagnostic(query.text, query.error)}</pre>
+	<pre class="diagnostic">{formatDiagnostic(query.source, query.error)}</pre>
 {:else if query.warnings.length > 0}
 	<p class="warning">{query.warnings[0].message}</p>
 {/if}

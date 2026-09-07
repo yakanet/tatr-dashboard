@@ -299,16 +299,40 @@ describe('the ~ term', () => {
 	});
 
 	it('refuses a bare ~', () => {
-		expect(() => parse('~')).toThrow('Expected a word or a quoted phrase after `~`');
+		expect(() => parse('~')).toThrow('Search text is expected here.');
 	});
 
 	it('refuses an unterminated quote, which is how typing looks halfway', () => {
-		expect(() => parse('~"windows sup')).toThrow('Unterminated quote');
-		expect(() => parse('~"')).toThrow('Unterminated quote');
+		expect(() => parse('~"windows sup')).toThrow('Expected `"`.');
+		expect(() => parse('~"')).toThrow('Expected `"`.');
 	});
 
 	it('refuses a phrase with nothing in it', () => {
-		expect(() => parse('~"  "')).toThrow('Empty search');
+		expect(() => parse('~"  "')).toThrow('empty search');
+	});
+
+	it('puts the caret where the closing quote belongs, not on the `~`', () => {
+		// The whole of the report: a caret under the `~` accuses the one character
+		// that is right. `[:bug` gets the same treatment from the CLI.
+		expect(formatDiagnostic('~"windows :bug', thrown('~"windows :bug'))).toBe(
+			['~"windows :bug', '              ^', 'Expected `"`.'].join('\n')
+		);
+	});
+
+	it('asks for the search text one past the `~`, as the CLI does past a `[`', () => {
+		const report = formatDiagnostic('~ and :bug', thrown('~ and :bug'));
+		expect(report).toContain('~<word>        - checks if the title holds a word');
+		expect(report.split('\n').slice(-3)).toEqual([
+			'~ and :bug',
+			' ^',
+			'Search text is expected here.'
+		]);
+	});
+
+	it('marks the empty phrase itself, there being nothing missing from it', () => {
+		expect(formatDiagnostic('~"  "', thrown('~"  "'))).toBe(
+			['~"  "', '^', 'empty search'].join('\n')
+		);
 	});
 
 	it('leaves a quote alone where the language has no use for one', () => {

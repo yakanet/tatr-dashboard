@@ -19,20 +19,44 @@ export class QueryState {
 	readonly #compiled = $derived.by(() => {
 		const source = this.text.trim();
 		if (source === '') {
-			return { match: () => true, error: null as TqlError | null, warnings: [] as TqlWarning[] };
+			return {
+				source,
+				match: () => true,
+				error: null as TqlError | null,
+				warnings: [] as TqlWarning[]
+			};
 		}
 		try {
-			return { match: compile(source), error: null, warnings: parseWithWarnings(source).warnings };
+			return {
+				source,
+				match: compile(source),
+				error: null,
+				warnings: parseWithWarnings(source).warnings
+			};
 		} catch (error) {
 			// An incomplete or ill-typed query is the normal state while typing, so
 			// it filters nothing rather than emptying the screen under the reader.
 			return {
+				source,
 				match: () => true,
 				error: error instanceof TqlError ? error : null,
 				warnings: [] as TqlWarning[]
 			};
 		}
 	});
+
+	/**
+	 * The query as it was compiled, which is what an error's columns count from.
+	 *
+	 * Whoever renders a diagnostic gets handed this rather than `text`: the two
+	 * differ by the trim, and printing the untrimmed line above a caret measured
+	 * on the trimmed one slid the source right and left the caret pointing at
+	 * nothing — leading spaces being invisible, the reader saw a caret accusing
+	 * a character several columns from the one it meant.
+	 */
+	get source(): string {
+		return this.#compiled.source;
+	}
 
 	get error(): TqlError | null {
 		return this.#compiled.error;

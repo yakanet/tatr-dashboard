@@ -215,17 +215,26 @@ export function parseWithWarnings(source: string): ParseResult {
 
 		if (token.text.startsWith('~')) {
 			const rest = token.text.slice(1);
+			// Where the missing piece belongs, not on the sigil asking for it. The
+			// CLI puts the caret one past `[` and at the end of the line for
+			// `[:bug`, both of which read as "type it here"; a caret under the `~`
+			// reads as "the `~` is wrong", which it is not.
+			const missing: Span = { start: token.span.end, end: token.span.end };
 			if (rest.length === 0) {
-				throw new TqlError('Expected a word or a quoted phrase after `~`', token.span);
+				throw new TqlError('Search text is expected here.', missing, PRIMARY_HELP);
 			}
 			if (!rest.startsWith('"')) {
 				return { kind: 'text', value: rest, span: token.span };
 			}
 			if (rest.length < 2 || !rest.endsWith('"')) {
-				throw new TqlError('Unterminated quote', token.span);
+				// An unclosed quote is an unclosed bracket: same mistake, so the same
+				// words the CLI uses for `[:bug` — `Expected `]`.`, no help block,
+				// because naming the character that is missing is the whole advice.
+				throw new TqlError('Expected `"`.', missing);
 			}
 			const phrase = rest.slice(1, -1);
-			if (phrase.trim().length === 0) throw new TqlError('Empty search', token.span);
+			// Lower case and unpunctuated, like the `empty tag` printed for `:`.
+			if (phrase.trim().length === 0) throw new TqlError('empty search', token.span);
 			return { kind: 'text', value: phrase, span: token.span };
 		}
 

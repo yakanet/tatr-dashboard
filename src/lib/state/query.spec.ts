@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { QueryState } from './query.svelte.ts';
+import { formatDiagnostic } from '../tql/query.ts';
 import { readTask, type Task } from '../tatr/task.ts';
 
 const make = (id: string, priority: number, tags: string[], closed = false): Task =>
@@ -93,11 +94,28 @@ describe('the ~ term, through the state', () => {
 
 	it('reports an unterminated quote instead of throwing', () => {
 		const query = withText('~"windows sup');
-		expect(query.error?.message).toBe('Unterminated quote');
+		expect(query.error?.message).toBe('Expected `"`.');
 		expect(query.apply(tasks)).toHaveLength(2);
 	});
 
 	it('reports a ~ used where a number belongs', () => {
 		expect(withText('priority eq ~x').error?.message).toContain('Expected integer');
+	});
+
+	it('hands out the source the error was measured on, spaces trimmed off', () => {
+		// A caret counts columns from what the compiler saw. Rendering `text`
+		// instead put the leading spaces back on the line above it and left the
+		// caret several columns short of the character it meant.
+		const query = withText('   nope   ');
+		expect(query.source).toBe('nope');
+		expect(formatDiagnostic(query.source, query.error!).split('\n').slice(-3)).toEqual([
+			'nope',
+			'^',
+			'Unexpected start of a primary expression `nope`.'
+		]);
+	});
+
+	it('has a source even when nothing is wrong with it', () => {
+		expect(withText('  :bug  ').source).toBe(':bug');
 	});
 });
