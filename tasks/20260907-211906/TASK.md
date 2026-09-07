@@ -114,3 +114,27 @@ identity is where it is actually read: the `ProviderError` it throws names it.
 `Provider` is now a single method — a function type wearing an interface, which
 is what lets a test spy on `.list`.
 
+---
+
+A pass counting readers rather than reading code, which found three exports that
+only the tests crossed.
+
+`PROVIDERS` and `listRepository` are private now. Both were reached from a spec
+and from nowhere else, so the specs go through the door the application uses —
+`githubKind.open(ref, { providers }).list()`. `open.ts` was already the only way
+in for everything but those tests; now it is the only way in.
+
+`KINDS` had no production reader at all: it was built for a registry of marks
+that closed with 20260906-211255. Rather than deleting the shape, `openSource`
+reads it, and the record stopped being derived from a list — it *is* the
+declaration, keys written out. Which turns out to be safer than the reduce it
+replaced: the mistake that reduce was guarding against, two kinds sharing an id,
+is an error the compiler makes in a literal. Twenty lines became four, and the
+throw-at-import and the duplicate-id check went with them. What a literal cannot
+check is that each key is the id its kind answers to, and the spec does that.
+
+One correction found while rewriting: routing the unsupported-host test through
+the source dropped the counting provider from the call, which made "without
+asking anybody" true for free. Passed properly through `OpenOptions`, and both
+guards were re-proved by breaking them.
+

@@ -17,7 +17,7 @@
 		{ id: 'local', name: 'A folder' }
 	] as const;
 
-	let where = $state<'remote' | 'local'>('remote');
+	let where = $state<typeof WHERE[number]['id']>('remote');
 	/**
 	 * Read once, in the browser: the local panel only ever renders after a click,
 	 * so the prerendered HTML never carries an answer to correct.

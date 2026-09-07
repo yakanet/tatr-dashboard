@@ -11,36 +11,26 @@ import { localKind } from './local/kind.ts';
 import type { OpenOptions, Source, SourceKind } from './source.ts';
 
 /**
- * Every kind there is. The list is what declares them; {@link KINDS} is how
- * they are looked up.
+ * Every source there is, by the id it answers to — the shape a lookup wants,
+ * an id being what a reading carries and what a mark would be picked by.
  *
- * A list can be counted, which a record cannot: written as an object with
- * computed keys, two kinds sharing an id would silently leave one of them out
- * and every test iterating the record would pass over the hole.
+ * Written out rather than reduced from a list: a duplicate key in a literal is
+ * an error the compiler makes, where `{[kind.id]: kind}` over a list would have
+ * silently dropped one and left every test iterating the record to pass over
+ * the hole. What a literal cannot check is that a key matches the id it stands
+ * for, and the spec does that.
+ *
+ * Frozen, so nothing registers a kind at runtime. Order is the declaration's,
+ * and nothing rests on it: the claims are disjoint — the local marker is a host
+ * with no dot in it, a forge claims a domain — which `claims nothing twice`
+ * keeps true.
  */
-const ALL: readonly SourceKind[] = [localKind, githubKind];
-
-/**
- * Every kind, by its own id — because an id is what a source is looked up by:
- * the UI holds a mark per id, and a reading carries the id it came from.
- *
- * Derived rather than written, so a key cannot disagree with the `id` it stands
- * for, and built through a check so a duplicate id is a thrown error at import
- * rather than a source that quietly does not exist.
- *
- * Order is not part of it, which is only true because the claims are disjoint —
- * the local marker is a host with no dot in it, and a forge claims a domain.
- * `claims nothing twice` in the spec is what keeps that true.
- */
-export const KINDS: Readonly<Record<string, SourceKind>> = Object.freeze(
-	ALL.reduce<Record<string, SourceKind>>((byId, kind) => {
-		if (byId[kind.id]) throw new Error(`Two source kinds claim the id ${kind.id}`);
-		byId[kind.id] = kind;
-		return byId;
-	}, {})
-);
+export const KINDS = Object.freeze({
+	local: localKind,
+	github: githubKind
+} satisfies Record<string, SourceKind>);
 
 export function openSource(ref: RepoRef, options: OpenOptions = {}): Source | null {
-	const kind = ALL.find((candidate) => candidate.claims(ref));
+	const kind = Object.values(KINDS).find((candidate) => candidate.claims(ref));
 	return kind ? kind.open(ref, options) : null;
 }

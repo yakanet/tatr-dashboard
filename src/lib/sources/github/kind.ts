@@ -84,7 +84,7 @@ function blobUrl(ref: RepoRef, branch: string, path: string): string {
  * repository's 64 tasks when measured, missing the newest. Two third parties
  * for that last case was more machinery than a reader of task folders needs.
  */
-export const PROVIDERS: Provider[] = [github, ungh];
+const PROVIDERS: Provider[] = [github, ungh];
 
 /**
  * Lists a repository, falling back through the listers in order.
@@ -93,7 +93,7 @@ export const PROVIDERS: Provider[] = [github, ungh];
  * someone else rather than by an error. A missing repository is missing
  * everywhere, so that one is not retried.
  */
-export async function listRepository(
+async function listRepository(
 	ref: RepoRef,
 	options: { providers?: Provider[]; signal?: AbortSignal } = {}
 ): Promise<Listing> {

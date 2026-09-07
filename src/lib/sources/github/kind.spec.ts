@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { githubKind, listRepository } from './kind.ts';
+import { githubKind } from './kind.ts';
 import { ProviderError } from '../provider.ts';
 import { parseRepoInput } from '../../repo/ref.ts';
 
@@ -60,16 +60,16 @@ describe('a host this forge does not serve', () => {
 	it('is refused as unsupported, without asking anybody', async () => {
 		let asked = 0;
 		const counting = {
-			name: 'counting',
 			list: async () => {
 				asked += 1;
 				throw new Error('should not be reached');
 			}
 		};
 
-		const failure = await listRepository(elsewhere, { providers: [counting] }).catch(
-			(error: unknown) => error
-		);
+		const failure = await githubKind
+			.open(elsewhere, { providers: [counting] })
+			.list()
+			.catch((error: unknown) => error);
 
 		expect(failure).toBeInstanceOf(ProviderError);
 		expect((failure as ProviderError).failure).toBe('unsupported-host');

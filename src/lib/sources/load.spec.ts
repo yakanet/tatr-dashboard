@@ -4,7 +4,7 @@ import { parseRepoPath } from '../repo/ref.ts';
 import { memoryStore } from './store.ts';
 import { NoTasksFolderError, loadRepository } from './load.ts';
 import { NoSourceError } from './source.ts';
-import { listRepository } from './github/kind.ts';
+import { githubKind } from './github/kind.ts';
 import { fromFileList } from './local/folder.ts';
 import { closeFolder, openFolder } from './local/kind.ts';
 import { localRef } from '../repo/ref.ts';
@@ -57,6 +57,12 @@ beforeEach(() => {
 });
 
 describe('provider fallback', () => {
+	/**
+	 * Through the door the application uses: the chain is the forge's own
+	 * business, reached by opening the source and asking it to list.
+	 */
+	const list = (providers: Provider[]) => githubKind.open(ref, { providers }).list();
+
 	// A listing no longer says who produced it, so the question is put to the
 	// providers themselves — which is the stronger form of it anyway: that the
 	// second was asked, rather than that the answer carries its name.
@@ -65,7 +71,7 @@ describe('provider fallback', () => {
 		const second = fakeProvider();
 		const spy = vi.spyOn(second, 'list');
 
-		const listing = await listRepository(ref, { providers: [first, second] });
+		const listing = await list([first, second]);
 
 		expect(listing.entries.length).toBeGreaterThan(0);
 		expect(spy).not.toHaveBeenCalled();
@@ -75,9 +81,7 @@ describe('provider fallback', () => {
 		const second = fakeProvider();
 		const spy = vi.spyOn(second, 'list');
 
-		const listing = await listRepository(ref, {
-			providers: [failing('github', 'rate-limited'), second]
-		});
+		const listing = await list([failing('github', 'rate-limited'), second]);
 
 		expect(spy).toHaveBeenCalled();
 		expect(listing.entries.length).toBeGreaterThan(0);
@@ -86,17 +90,15 @@ describe('provider fallback', () => {
 	it('does not ask the others when the repository does not exist', async () => {
 		const second = fakeProvider();
 		const spy = vi.spyOn(second, 'list');
-		await expect(
-			listRepository(ref, { providers: [failing('github', 'not-found'), second] })
-		).rejects.toThrow(ProviderError);
+		await expect(list([failing('github', 'not-found'), second])).rejects.toThrow(
+			ProviderError
+		);
 		expect(spy).not.toHaveBeenCalled();
 	});
 
 	it('rethrows when every provider fails', async () => {
 		await expect(
-			listRepository(ref, {
-				providers: [failing('github', 'rate-limited'), failing('ungh', 'network')]
-			})
+			list([failing('github', 'rate-limited'), failing('ungh', 'network')])
 		).rejects.toThrow(ProviderError);
 	});
 });
