@@ -213,11 +213,21 @@ And `loadTaskDescription` had started mapping an empty body to *no* body:
 `null` is a file that could not be read and an empty file is one that says
 nothing, and a translation meant to be mechanical should not blur them.
 
-Left as notes: `repeatable` in the layout is a `$derived` over `ref` reading
-module state that is not reactive, which no current path can catch out — every
-`openFolder` is followed by a navigation — and the `unsupported-host` error now
-carries a host in the field documented for a provider's name, which nothing
-reads.
+Left as a note in the code where a reader would trip on it: `repeatable` in the
+layout is a `$derived` over `ref` reading module state that is not reactive,
+which no current path can catch out — every `openFolder` ends in a navigation
+that renews `ref`. And the `unsupported-host` error carries a host in the field
+documented for a provider's name, which nothing reads.
+
+The seam itself is covered now, which it was not: the loader's tests exercise
+the reading and `open.spec.ts` only asserted what each source *says about
+itself*. Nine tests ask what they do — a file read from the CDN and the URL it
+asked for, a refused file and a network that does not answer at all, both
+answering null rather than throwing, since one unreadable task is listed as
+skipped instead of taking the whole load down; and for a folder, a file in
+memory, a path it does not hold, the name no URL carries, and the folder with
+nothing behind it. Checked by letting a fetch failure through, which fails two
+of them.
 
 One thing the interface tidied on its own: five of `local.ts`'s exports have no
 reader outside it any more — the session is reached through the source now, so

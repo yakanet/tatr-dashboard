@@ -38,7 +38,15 @@
 	 */
 	const label = $derived(isLocal(ref) ? repo.name : path);
 
-	/** Whether Refresh means anything here, which only the source knows. */
+	/**
+	 * Whether Refresh means anything here, which only the source knows.
+	 *
+	 * Recomputed when the reference changes, and a folder being opened is not a
+	 * change of reference — it is module state, which nothing here observes. It
+	 * holds because every way of opening a folder ends in a navigation that
+	 * renews `ref`; if one ever does not, this is where it will read `Refresh`
+	 * over a folder that cannot be refreshed.
+	 */
 	const repeatable = $derived(openSource(ref)?.repeatable ?? false);
 
 	/** The query travels with the link, so a filtered view stays shareable. */
