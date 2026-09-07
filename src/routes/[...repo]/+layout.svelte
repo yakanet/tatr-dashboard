@@ -61,7 +61,12 @@
 	}
 </script>
 
-<Shortcuts onview={switchTo} onhelp={() => (helping = !helping)} ondismiss={dismiss} />
+<Shortcuts
+	onview={switchTo}
+	onhelp={() => (helping = !helping)}
+	ondismiss={dismiss}
+	modal={helping}
+/>
 
 {#if helping}
 	<KeyHelp views={views.map((view) => view.name)} onclose={() => (helping = false)} />

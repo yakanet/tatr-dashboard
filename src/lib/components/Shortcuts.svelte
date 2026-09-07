@@ -4,13 +4,21 @@
 	let {
 		onview,
 		onhelp,
-		ondismiss
+		ondismiss,
+		modal = false
 	}: {
 		/** Switch to the view at this position in the nav. */
 		onview: (index: number) => void;
 		onhelp: () => void;
 		/** Escape, which the layout uses to close whatever it has open. */
 		ondismiss: () => void;
+		/**
+		 * True while something modal is open. Navigation then does nothing: moving
+		 * the focus would take it out of a dialog that claims `aria-modal`, and a
+		 * row lighting up behind a panel is nobody's intent. Cheaper than trapping
+		 * the focus, and this layer is what opened the panel, so it already knows.
+		 */
+		modal?: boolean;
 	} = $props();
 
 	let pending = $state<Pending>(NOTHING_PENDING);
@@ -109,6 +117,9 @@
 		if (!pressed.action) return;
 
 		const action = pressed.action;
+		// The panel owns Escape while it is up, and `?` still toggles it. Nothing
+		// else reaches the page behind.
+		if (modal && action.kind !== 'help' && action.kind !== 'dismiss') return;
 		if (action.kind === 'search') {
 			const box = document.querySelector<HTMLElement>('[data-key-search]');
 			if (!box) return;

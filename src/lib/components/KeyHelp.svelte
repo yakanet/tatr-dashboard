@@ -5,22 +5,30 @@
 
 	let panel = $state<HTMLElement | null>(null);
 
-	// Opened from the keyboard, so it has to be reachable from the keyboard: the
-	// focus goes in, and Escape takes it back out through the layout's dismiss.
+	// Opened from the keyboard, so it has to be closable from the keyboard.
 	$effect(() => {
 		panel?.focus();
 	});
+
+	/**
+	 * Escape is handled here rather than left to the shortcut layer.
+	 *
+	 * The panel takes the focus when it opens, so a key pressed in it starts
+	 * from inside — and the panel used to stop every key from propagating, which
+	 * swallowed the one shortcut it advertises in its own list. Owning Escape is
+	 * both shorter and the reason nothing has to be stopped now.
+	 */
+	function onkeydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape') return;
+		event.preventDefault();
+		onclose();
+	}
 </script>
 
 <!-- A backdrop that closes on click, with the panel stopping the click that
-     lands on it. Not a <dialog>: the shortcut layer already owns Escape, and a
-     modal dialog would take it back. -->
-<div
-	class="backdrop"
-	role="presentation"
-	onclick={onclose}
-	onkeydown={(event) => event.key === 'Enter' && onclose()}
->
+     lands on it. Not a <dialog>: it would take Escape and the modal keyboard
+     with it, and the shortcut layer has to keep both. -->
+<div class="backdrop" role="presentation" onclick={onclose}>
 	<div
 		class="panel"
 		role="dialog"
@@ -28,8 +36,8 @@
 		aria-label="Keyboard shortcuts"
 		tabindex="-1"
 		bind:this={panel}
+		{onkeydown}
 		onclick={(event) => event.stopPropagation()}
-		onkeydown={(event) => event.stopPropagation()}
 	>
 		<h2>Keyboard</h2>
 		<dl>
