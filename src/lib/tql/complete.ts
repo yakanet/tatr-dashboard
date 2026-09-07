@@ -61,6 +61,22 @@ const KEYWORDS: readonly { value: string; detail: string }[] = [
 /** Characters a token can hold: sigils and punctuation, then the name itself. */
 const TOKEN = /[A-Za-z0-9_:.~"-]/;
 
+/**
+ * Whether the caret sits inside a `~"..."` phrase.
+ *
+ * An unclosed quote before the caret is the whole test — quotes only ever open a
+ * search, and one that has not been closed means the caret is still in it. This
+ * also covers a caret several words deep, which is exactly where reading the
+ * token alone fails.
+ */
+function insideSearch(text: string, cursor: number): boolean {
+	let quotes = 0;
+	for (let i = 0; i < cursor && i < text.length; i++) {
+		if (text[i] === '"') quotes += 1;
+	}
+	return quotes % 2 === 1;
+}
+
 /** The token the caret sits in or just after, as a half-open range. */
 export function tokenAt(text: string, cursor: number): { start: number; end: number } {
 	let start = Math.min(cursor, text.length);
@@ -80,15 +96,17 @@ export function tokenAt(text: string, cursor: number): { start: number; end: num
  * out entirely rather than ranked below — the reader has already said which
  * half of the vocabulary they want.
  *
- * A token opening with `~` is a search through titles, where neither a tag nor a
- * keyword can appear. Nothing is offered there: a menu suggesting `:bug` into
- * the middle of a phrase would be worse than no menu.
+ * Inside a `~` search nothing is offered, since neither a tag nor a keyword can
+ * appear there — a menu suggesting `:bug` into the middle of a phrase offers to
+ * break the query. Detecting that cannot be done from the token alone: a phrase
+ * holds spaces, `tokenAt` stops at them, and by the second word the `~"` is out
+ * of view. The text before the caret is what knows.
  */
 export function complete(text: string, cursor: number, tags: readonly TagOption[]): Completions | null {
 	const { start, end } = tokenAt(text, cursor);
 	const token = text.slice(start, cursor);
 	if (token.length === 0) return null;
-	if (token[0] === '~') return null;
+	if (token[0] === '~' || insideSearch(text, cursor)) return null;
 
 	const sigil = token[0] === ':' || token[0] === '.';
 	const needle = (sigil ? token.slice(1) : token).toLowerCase();

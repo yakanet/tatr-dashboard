@@ -1,6 +1,6 @@
 # Completion offers tags inside a `~"..."` search
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: tql,ui
 
@@ -20,3 +20,24 @@ needed.
 Fix by looking at the text before the caret rather than at the token alone: an
 odd number of quotes means the caret is inside a phrase. Test it with a prefix
 that *does* match a tag, which is the whole point.
+
+---
+
+Fixed by reading the text before the caret instead of the token alone: an
+unclosed quote means the caret is still inside a phrase. Quotes only ever open a
+search, so counting them is the whole test, and it holds however many words deep
+the caret has gone.
+
+The tests were rewritten to end on prefixes that **do** match a tag — `~"bu`,
+`~"windows bu`, `~"windows support bu`, `:tql and ~"windows bu`, `~"de` — plus
+two that check the menu comes back once the phrase is closed.
+
+Then they were run against the old guard to make sure they could fail, which is
+the part the first attempt skipped. Three of the five fail without the fix. The
+other two pass either way, because in `~"bu` the token *is* `~"bu` and the old
+`token[0] === '~'` catches it; the three that fall are the ones where the caret
+sits on the second word or later, which is precisely the gap. So the cases cover
+both paths rather than five copies of one.
+
+Verified on screen too: nothing offered in `~"windows bu`, and `:bug` back as
+soon as the phrase closes.

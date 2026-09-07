@@ -73,9 +73,29 @@ describe('complete', () => {
 		});
 	});
 
-	it('has nothing to say inside a search, where neither can appear', () => {
+	it('has nothing to say after a bare ~', () => {
 		expect(complete('~b', 2, TAGS)).toBeNull();
-		expect(complete('~"windows su', 12, TAGS)).toBeNull();
+	});
+
+	// Each of these ends on a prefix that DOES match a tag, which is the whole
+	// point: the earlier version of this test used `su`, matched nothing, and
+	// passed while the bug was live.
+	it.each([
+		['~"bu', 5],
+		['~"windows bu', 12],
+		['~"windows support bu', 20],
+		[':tql and ~"windows bu', 21],
+		['~"de', 4]
+	])('offers nothing inside a phrase, at %o', (text, cursor) => {
+		expect(complete(text, cursor, TAGS)).toBeNull();
+	});
+
+	it('offers again once the phrase is closed', () => {
+		expect(values('~"windows" and :b', 17)).toEqual([':bug', ':debug']);
+	});
+
+	it('offers again after a closed phrase and a keyword', () => {
+		expect(values('~"a" or t', 9)).toEqual([':tql', 'tagged']);
 	});
 
 	it('has nothing to say off a token', () => {
