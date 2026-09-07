@@ -9,8 +9,7 @@
  * sits behind GitHub rather than in front of it: the normal path should not
  * depend on someone else's goodwill.
  */
-import type { RepoRef } from '../repo/ref.ts';
-import { ProviderError, assertGitHub, type Listing, type Provider } from './provider.ts';
+import {type Provider, ProviderError} from './provider.ts';
 
 const API = 'https://ungh.cc';
 const NAME = 'ungh';
@@ -23,7 +22,6 @@ export const ungh: Provider = {
 	name: NAME,
 
 	async list(ref, signal) {
-		assertGitHub(ref, NAME);
 		const branch = ref.branch ?? 'HEAD';
 		const url = `${API}/repos/${ref.owner}/${ref.name}/files/${encodeURIComponent(branch)}`;
 

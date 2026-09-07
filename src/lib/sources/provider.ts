@@ -1,8 +1,10 @@
 /**
- * A provider lists the task folders of a repository and reads files from it.
+ * A provider is one way of listing a repository's files.
  *
- * Listing is the only operation that can be rate-limited, so it is deliberately
- * separated from reading: contents always come from a CDN that imposes no budget.
+ * A forge owns an ordered list of them and falls through it, so this is the
+ * vocabulary that list shares — the entries, the failures, and nothing about
+ * whose repository it is. Which host a provider serves, and whether reading
+ * from it costs anything, are facts about the forge and live with it.
  */
 import type { RepoRef } from '../repo/ref.ts';
 
@@ -45,16 +47,5 @@ export class ProviderError extends Error {
 		this.name = 'ProviderError';
 		this.failure = failure;
 		this.source = source;
-	}
-}
-
-/** Only GitHub is implemented; the URL scheme already carries other hosts. */
-export function assertGitHub(ref: RepoRef, source: string): void {
-	if (ref.host !== 'github.com') {
-		throw new ProviderError(
-			'unsupported-host',
-			source,
-			`${ref.host} is not supported yet — only github.com`
-		);
 	}
 }

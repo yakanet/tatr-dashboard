@@ -5,8 +5,7 @@
  * when measured it reported 63 of 64 tasks, missing the most recent one. Its
  * listings are therefore flagged as possibly stale so the UI can say so.
  */
-import type { RepoRef } from '../repo/ref.ts';
-import { ProviderError, assertGitHub, type Listing, type Provider } from './provider.ts';
+import {type Provider, ProviderError} from './provider.ts';
 
 const API = 'https://data.jsdelivr.com/v1/packages/gh';
 const NAME = 'jsdelivr';
@@ -19,7 +18,6 @@ export const jsdelivr: Provider = {
 	name: NAME,
 
 	async list(ref, signal) {
-		assertGitHub(ref, NAME);
 		const branch = ref.branch ?? 'HEAD';
 		const url = `${API}/${ref.owner}/${ref.name}@${encodeURIComponent(branch)}?structure=flat`;
 

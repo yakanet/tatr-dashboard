@@ -15,7 +15,7 @@
  * unauthenticated, so revalidation is not free and caching is done on a TTL.
  */
 import { repoKey, type RepoRef } from '../repo/ref.ts';
-import { ProviderError, assertGitHub, type Listing, type Provider } from './provider.ts';
+import { ProviderError, type Listing, type Provider } from './provider.ts';
 import { jsdelivr } from './jsdelivr.ts';
 import { ungh } from './ungh.ts';
 import type { OpenOptions, Source, SourceKind } from './source.ts';
@@ -56,25 +56,26 @@ async function json(url: string, signal?: AbortSignal): Promise<Response> {
 }
 
 /**
- * Resolves the default branch by name. Not needed to read a repository — `HEAD`
- * works for that — so this costs a request and is only worth calling to *display*
- * the branch.
+ * Refuses a reference this forge does not serve.
+ *
+ * Asked once, at the entrance of the fallback chain, rather than by each lister
+ * in it: all three read GitHub — its API, a proxy of it, a cache of it — so the
+ * host is the forge's business and asking three times said so three times.
  */
-export async function defaultBranch(ref: RepoRef, signal?: AbortSignal): Promise<string> {
-	assertGitHub(ref, NAME);
-	const response = await json(`${API}/repos/${ref.owner}/${ref.name}`, signal);
-	const body = (await response.json()) as { default_branch?: string };
-	if (!body.default_branch) {
-		throw new ProviderError('malformed', NAME, 'No default branch in the response');
+function assertHost(ref: RepoRef): void {
+	if (ref.host !== 'github.com') {
+		throw new ProviderError(
+			'unsupported-host',
+			NAME,
+			`${ref.host} is not supported yet — only github.com`
+		);
 	}
-	return body.default_branch;
 }
 
 export const github: Provider = {
 	name: NAME,
 
 	async list(ref, signal) {
-		assertGitHub(ref, NAME);
 		// `HEAD` avoids a second request to learn the default branch's name.
 		const branch = ref.branch ?? 'HEAD';
 		const response = await json(
@@ -114,7 +115,7 @@ export const github: Provider = {
 const encodePath = (path: string) => path.split('/').map(encodeURIComponent).join('/');
 
 /** URL of a file's raw contents. Free of the API budget. */
-export function rawUrl(ref: RepoRef, branch: string, path: string): string {
+function rawUrl(ref: RepoRef, branch: string, path: string): string {
 	return `${RAW}/${ref.owner}/${ref.name}/${encodePath(branch)}/${encodePath(path)}`;
 }
 
@@ -131,7 +132,7 @@ export function rawUrl(ref: RepoRef, branch: string, path: string): string {
  * lives on the forge's own domain. The path shape is still GitHub's — GitLab
  * spells it `/-/blob/` — which is 20260906-211255's problem, not this one's.
  */
-export function blobUrl(ref: RepoRef, branch: string, path: string): string {
+function blobUrl(ref: RepoRef, branch: string, path: string): string {
 	return `https://${ref.host}/${ref.owner}/${ref.name}/blob/${encodePath(branch)}/${encodePath(path)}`;
 }
 
@@ -153,6 +154,7 @@ export async function listRepository(
 	ref: RepoRef,
 	options: { providers?: Provider[]; signal?: AbortSignal } = {}
 ): Promise<Listing> {
+	assertHost(ref);
 	const providers = options.providers ?? PROVIDERS;
 	let lastError: unknown;
 
@@ -178,9 +180,9 @@ export async function listRepository(
 export const githubKind: SourceKind = {
 	id: NAME,
 
-	// Any domain for now, which is every host but the local marker:
-	// `assertGitHub` inside the listers is what actually refuses the others, and
-	// refusing them here is this method's job once a second forge claims some.
+	// Any domain for now, which is every host but the local marker: `assertHost`
+	// is what actually refuses the others, and refusing them here becomes this
+	// method's job once a second forge claims some.
 	claims: (ref) => ref.host.includes('.'),
 
 	open(ref: RepoRef, options: OpenOptions = {}): Source {
