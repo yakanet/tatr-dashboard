@@ -6,7 +6,9 @@
 	import KeyHelp from '#lib/components/KeyHelp.svelte';
 	import Mark from '#lib/components/Mark.svelte';
 	import Shortcuts from '#lib/components/Shortcuts.svelte';
-	import { formatRepoPath } from '#lib/repo/ref.ts';
+	import FolderPicker from '#lib/components/FolderPicker.svelte';
+	import { formatRepoPath, isLocal } from '#lib/repo/ref.ts';
+	import { canReread } from '#lib/sources/local.ts';
 	import { RepositoryState, describeAge, REPOSITORY } from '#lib/state/repository.svelte.ts';
 	import { QUERY, QueryState } from '#lib/state/query.svelte.ts';
 
@@ -30,6 +32,11 @@
 	});
 
 	const path = $derived(formatRepoPath(ref));
+	/**
+	 * What the header calls this repository: the URL form for a forge, branch and
+	 * all, and for a folder the name the reading found — no URL carries it.
+	 */
+	const label = $derived(isLocal(ref) ? repo.name : path);
 
 	/** The query travels with the link, so a filtered view stays shareable. */
 	const search = $derived.by(() => {
@@ -78,7 +85,7 @@
 	     middle of each box, which leaves the smaller type sitting low. -->
 	<div class="identity">
 		<a class="brand" href={resolve('/')}><Mark size={18} /> tatr</a>
-		<span class="repo">{path}</span>
+		<span class="repo">{label}</span>
 
 		<nav>
 			{#each views as view (view.base)}
@@ -95,7 +102,14 @@
 			{describeAge(repo.storedAt)}
 			{#if repo.mayBeStale}<span class="stale">· {repo.source} may be behind</span>{/if}
 		</span>
-		<button onclick={() => repo.load(ref, true)}>Refresh</button>
+		{#if isLocal(ref) && !canReread()}
+			<!-- The directory input hands over files and no way back to the folder,
+			     so rereading means asking for it again. Where the picker exists its
+			     handle is kept, and Refresh is a refresh. -->
+			<FolderPicker label="Reopen…" />
+		{:else}
+			<button onclick={() => repo.load(ref, true)}>Refresh</button>
+		{/if}
 	{/if}
 </header>
 

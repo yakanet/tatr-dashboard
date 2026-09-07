@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatRepoPath, parseRepoInput, parseRepoPath, repoKey } from './ref.ts';
+import {
+	describeRef,
+	formatRepoPath,
+	isLocal,
+	localRef,
+	parseRepoInput,
+	parseRepoPath,
+	repoKey
+} from './ref.ts';
 
 describe('parseRepoPath', () => {
 	it('defaults the host to github.com', () => {
@@ -114,5 +122,31 @@ describe('repoKey', () => {
 		const implicit = repoKey(parseRepoPath('tsoding/tatr')!);
 		const explicit = repoKey(parseRepoPath('tsoding/tatr@main')!);
 		expect(implicit).not.toBe(explicit);
+	});
+});
+
+describe('a folder on this machine', () => {
+	it('is what the one reserved segment means', () => {
+		expect(parseRepoPath('local')).toEqual({ host: 'local', owner: '', name: '' });
+		expect(isLocal(parseRepoPath('local')!)).toBe(true);
+	});
+
+	it('cannot be confused with a repository, which needs an owner too', () => {
+		expect(parseRepoPath('local/tatr')).toEqual({
+			host: 'github.com',
+			owner: 'local',
+			name: 'tatr'
+		});
+		expect(isLocal(parseRepoPath('local/tatr')!)).toBe(false);
+	});
+
+	it('keeps the folder name out of the URL, which nobody else could follow', () => {
+		expect(formatRepoPath(localRef('tatr-site'))).toBe('local');
+	});
+
+	it('reads on screen as the folder name, having no owner to qualify it', () => {
+		expect(describeRef(localRef('tatr-site'))).toBe('tatr-site');
+		expect(describeRef(localRef())).toBe('a folder on this machine');
+		expect(describeRef(parseRepoPath('tsoding/tatr')!)).toBe('tsoding/tatr');
 	});
 });

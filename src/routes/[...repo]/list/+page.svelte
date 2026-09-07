@@ -58,7 +58,7 @@
 </script>
 
 <svelte:head>
-	<title>{ref.owner}/{ref.name} — list</title>
+	<title>{repo.name} — list</title>
 </svelte:head>
 
 <QueryBar {query} matched={visible.length} {pool} tags={tagOptions} onchange={syncUrl} />

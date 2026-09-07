@@ -5,9 +5,9 @@
  * rate-limited, then the task files stream in and are counted. Showing that
  * split is what lets the UI explain a failure instead of just spinning.
  */
-import { loadRepository, NoTasksFolderError } from '../sources/load.ts';
+import { loadRepository, NoFolderError, NoTasksFolderError } from '../sources/load.ts';
 import { ProviderError, type ProviderFailure } from '../sources/provider.ts';
-import type { RepoRef } from '../repo/ref.ts';
+import { describeRef, type RepoRef } from '../repo/ref.ts';
 import { compare, type Changes, type Movement, type Snapshot } from '../tatr/changes.ts';
 import type { Task } from '../tatr/task.ts';
 import type { TagDescriptions } from '../tatr/tags-file.ts';
@@ -18,7 +18,7 @@ export const REPOSITORY = Symbol('repository');
 export type Phase = 'idle' | 'listing' | 'reading' | 'ready' | 'failed';
 
 export interface Failure {
-	kind: ProviderFailure | 'no-tasks-folder' | 'unknown';
+	kind: ProviderFailure | 'no-tasks-folder' | 'no-folder' | 'unknown';
 	message: string;
 }
 
@@ -32,6 +32,10 @@ export class RepositoryState {
 	total = $state(0);
 	/** Which provider answered, and whether it serves a cached view. */
 	source = $state('');
+	/** What the reading calls itself: `owner/name`, or the folder's own name. */
+	label = $state('');
+	/** What is being read, kept so a view can name it before there is a reading. */
+	ref = $state<RepoRef | null>(null);
 	mayBeStale = $state(false);
 	fromCache = $state(false);
 	storedAt = $state(0);
@@ -41,6 +45,15 @@ export class RepositoryState {
 	previous = $state<Snapshot | null>(null);
 
 	#controller: AbortController | null = null;
+
+	/**
+	 * How to name this repository on screen, at any point in a load.
+	 *
+	 * The reading knows best — a local folder's name is in it and nowhere else —
+	 * but a page has a title before there is a reading, so the reference stands
+	 * in until then.
+	 */
+	readonly name = $derived(this.label || (this.ref ? describeRef(this.ref) : ''));
 
 	readonly open = $derived(this.tasks.filter((task) => !task.closed));
 	readonly closed = $derived(this.tasks.filter((task) => task.closed));
@@ -66,6 +79,7 @@ export class RepositoryState {
 		const controller = new AbortController();
 		this.#controller = controller;
 
+		this.ref = ref;
 		this.phase = 'listing';
 		this.failure = null;
 		this.done = 0;
@@ -92,6 +106,7 @@ export class RepositoryState {
 			this.skipped = result.skipped;
 			this.tags = result.tags;
 			this.source = result.source;
+			this.label = result.label;
 			this.mayBeStale = result.mayBeStale;
 			this.fromCache = result.fromCache;
 			this.storedAt = result.storedAt;
@@ -117,6 +132,9 @@ export class RepositoryState {
 }
 
 function describe(error: unknown): Failure {
+	if (error instanceof NoFolderError) {
+		return { kind: 'no-folder', message: error.message };
+	}
 	if (error instanceof NoTasksFolderError) {
 		return { kind: 'no-tasks-folder', message: error.message };
 	}

@@ -16,6 +16,26 @@ export type RepoRef = {
 
 export const DEFAULT_HOST = 'github.com';
 
+/**
+ * The host of a folder on the reader's own machine.
+ *
+ * Not a host at all, which is the point: it marks a reference that no URL can
+ * resolve. A local folder is a session rather than an address — the browser
+ * gives access to it on a gesture and takes it back on a reload — so our own
+ * URL carries the marker and nothing else, and the folder itself is held in
+ * memory for as long as the reader stays.
+ */
+export const LOCAL_HOST = 'local';
+
+/** A reference to whichever folder the reader has open, named once picked. */
+export function localRef(name = ''): RepoRef {
+	return { host: LOCAL_HOST, owner: '', name };
+}
+
+export function isLocal(ref: RepoRef): boolean {
+	return ref.host === LOCAL_HOST;
+}
+
 /** GitHub allows these characters in owner and repository names. */
 const SEGMENT = /^[A-Za-z0-9._-]+$/;
 
@@ -47,6 +67,9 @@ function build(host: string, owner: string, name: string, branch?: string): Repo
 export function parseRepoPath(path: string): RepoRef | null {
 	const trimmed = path.replace(/^\/+|\/+$/g, '');
 	if (!trimmed) return null;
+	// One segment is never a repository on a forge, which needs an owner too, so
+	// the word is free to mean the folder the reader has open.
+	if (trimmed === LOCAL_HOST) return localRef();
 
 	const at = trimmed.indexOf('@');
 	const branch = at === -1 ? undefined : trimmed.slice(at + 1) || undefined;
@@ -102,6 +125,9 @@ function fromHostAndPath(host: string, path: string): RepoRef | null {
 
 /** Renders a reference back into the path form used by our own URLs. */
 export function formatRepoPath(ref: RepoRef): string {
+	// The folder's name is deliberately not in the URL: it would read as an
+	// address, and nobody else's machine can follow it.
+	if (isLocal(ref)) return LOCAL_HOST;
 	const prefix = ref.host === DEFAULT_HOST ? '' : `${ref.host}/`;
 	const suffix = ref.branch ? `@${ref.branch}` : '';
 	return `${prefix}${ref.owner}/${ref.name}${suffix}`;
@@ -110,4 +136,15 @@ export function formatRepoPath(ref: RepoRef): string {
 /** Stable identity for caching, independent of the default-branch lookup. */
 export function repoKey(ref: RepoRef): string {
 	return `${ref.host}/${ref.owner}/${ref.name}@${ref.branch ?? ''}`;
+}
+
+/**
+ * How a reference reads on screen: `tsoding/tatr`, or a folder's own name.
+ *
+ * A local folder has no owner to qualify it, so its name stands alone — and
+ * before one is picked there is nothing to name at all.
+ */
+export function describeRef(ref: RepoRef): string {
+	if (isLocal(ref)) return ref.name || 'a folder on this machine';
+	return `${ref.owner}/${ref.name}`;
 }

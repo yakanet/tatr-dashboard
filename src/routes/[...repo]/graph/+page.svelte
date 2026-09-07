@@ -167,7 +167,7 @@
 </script>
 
 <svelte:head>
-	<title>{ref.owner}/{ref.name} — references</title>
+	<title>{repo.name} — references</title>
 </svelte:head>
 
 <main>

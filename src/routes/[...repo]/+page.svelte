@@ -67,7 +67,7 @@
 </script>
 
 <svelte:head>
-	<title>{ref.owner}/{ref.name} — tatr dashboard</title>
+	<title>{repo.name} — tatr dashboard</title>
 </svelte:head>
 
 <main>
