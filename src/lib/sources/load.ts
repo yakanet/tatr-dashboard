@@ -230,6 +230,8 @@ export async function loadTaskDescription(
 	// memory. The branch is passed rather than assumed, being what the reading
 	// resolved.
 	const source = openSource(ref, { branch, fetchImpl: options.fetchImpl });
-	const text = await source?.read(`tasks/${id}/TASK.md`, options.signal);
-	return text ? parseTaskMd(text).description : null;
+	const text = source ? await source.read(`tasks/${id}/TASK.md`, options.signal) : null;
+	// `null` is a file that could not be read; an empty one is a file that says
+	// nothing, and those are not the same answer even where they look alike.
+	return text === null ? null : parseTaskMd(text).description;
 }

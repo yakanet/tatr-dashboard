@@ -11,8 +11,21 @@ const refs: RepoRef[] = [
 
 describe('the registry', () => {
 	it('keys every kind by its own id', () => {
-		// Computed keys, so a key cannot drift from the id it stands for.
+		// Derived keys, so a key cannot drift from the id it stands for.
 		for (const [key, kind] of Object.entries(KINDS)) expect(key).toBe(kind.id);
+	});
+
+	it('holds the kinds this app has, named', () => {
+		// Named here rather than counted from the record: a record iterated
+		// against itself passes over a kind that a duplicate id dropped, which is
+		// the one mistake keying by id can make.
+		expect(Object.keys(KINDS).toSorted()).toEqual(['github', 'local']);
+	});
+
+	it('is closed to writing, so nothing can register a kind at runtime', () => {
+		expect(() => {
+			(KINDS as Record<string, unknown>).sneaky = {};
+		}).toThrow();
 	});
 
 	it('claims nothing twice', () => {

@@ -198,6 +198,27 @@ source rather than reading one: offering the folder picker in the failure panel,
 and showing a folder's name where a forge shows its URL form. That is the right
 home for the last of that knowledge.
 
+A review of the POC found two things worth fixing and two worth only a note.
+
+The registry keyed by id could silently lose a kind: written as an object with
+computed keys, two kinds sharing an id would leave one of them out, and a test
+that iterates the record would pass over the hole it left. So the list is what
+declares them and the record is *derived* from it, through a check that throws
+at import — proved by giving two kinds one id, which now fails to load rather
+than quietly serving one source less. The spec names the ids it expects instead
+of counting the record against itself.
+
+And `loadTaskDescription` had started mapping an empty body to *no* body:
+`text ? parse : null`. Both render the same screen, so nothing was visible, but
+`null` is a file that could not be read and an empty file is one that says
+nothing, and a translation meant to be mechanical should not blur them.
+
+Left as notes: `repeatable` in the layout is a `$derived` over `ref` reading
+module state that is not reactive, which no current path can catch out — every
+`openFolder` is followed by a navigation — and the `unsupported-host` error now
+carries a host in the field documented for a provider's name, which nothing
+reads.
+
 One thing the interface tidied on its own: five of `local.ts`'s exports have no
 reader outside it any more — the session is reached through the source now, so
 only opening and closing a folder leave the module. A surface that shrinks
