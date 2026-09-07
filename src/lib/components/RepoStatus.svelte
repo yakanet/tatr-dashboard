@@ -40,7 +40,7 @@
 		{:else if repo.failure.kind === 'not-found'}
 			<h2>Not found</h2>
 			<p>No repository at <code>{formatRepoPath(ref)}</code>, or it is private.</p>
-		{:else if repo.failure.kind === 'no-folder'}
+		{:else if repo.failure.kind === 'no-source'}
 			<h2>No folder open</h2>
 			<p>
 				A folder is read where it sits, so the browser only grants access while you are here — a

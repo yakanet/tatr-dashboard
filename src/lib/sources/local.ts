@@ -49,6 +49,9 @@ export function canDropFolder(): boolean {
 	return 'getAsFileSystemHandle' in item || 'webkitGetAsEntry' in item;
 }
 
+import { isLocal } from '../repo/ref.ts';
+import { NoSourceError, type Source, type SourceKind } from './source.ts';
+
 /** A repository read from the disk, as much of it as this viewer looks at. */
 export interface LocalFolder {
 	/** The folder's own name, which is all the identity a local source has. */
@@ -277,6 +280,12 @@ export async function readBranch(folder: LocalFolder): Promise<string | undefine
 	return match?.[1];
 }
 
+/*
+ * From here down, the session: the folder that is open, and the reading of it.
+ * Only `openFolder` and `closeFolder` leave this module — everything else is
+ * reached through the source, which is what the rest of the app talks to.
+ */
+
 /**
  * The folder the reader has open, for as long as they stay.
  *
@@ -297,17 +306,17 @@ export function openFolder(folder: LocalFolder, handle?: FileSystemDirectoryHand
 	openedHandle = handle ?? null;
 }
 
-export function openedFolder(): LocalFolder | null {
+function openedFolder(): LocalFolder | null {
 	return opened;
 }
 
 /** Whether a refresh can reread the folder, or has to ask for it again. */
-export function canReread(): boolean {
+function canReread(): boolean {
 	return openedHandle !== null;
 }
 
 /** Rereads the folder from its handle, for the refresh control. */
-export async function reread(): Promise<LocalFolder | null> {
+async function reread(): Promise<LocalFolder | null> {
 	if (!openedHandle) return opened;
 	const folder = await fromDirectoryHandle(openedHandle);
 	const handle = openedHandle;
@@ -329,7 +338,7 @@ export function closeFolder(): void {
  * `blob:` URLs live until revoked, so they are made once per path and dropped
  * with the folder they came from.
  */
-export function assetUrl(path: string): string | null {
+function assetUrl(path: string): string | null {
 	const file = opened?.files.get(path);
 	if (!file) return null;
 	const existing = assets.get(path);
@@ -339,8 +348,53 @@ export function assetUrl(path: string): string | null {
 	return url;
 }
 
+/**
+ * The folder the reader has open, as a source.
+ *
+ * What it does not have is as telling as what it does: no cache key, because
+ * reading the folder is free and a stored copy of files someone is editing
+ * would be wrong before it was written; no `fileUrl`, because there is no page
+ * anywhere to link a file to. Both were branches in the loader and in a view
+ * before this interface existed.
+ */
+export const localKind: SourceKind = {
+	id: 'local',
+
+	claims: (ref) => isLocal(ref),
+
+	open(): Source {
+		return {
+			id: 'local',
+			label: openedFolder()?.name ?? '',
+			cacheKey: null,
+			// A disk has no CDN to be polite to.
+			concurrency: Number.POSITIVE_INFINITY,
+			// Only where a handle was kept: a directory input hands over files and
+			// no way back to the folder they came from.
+			repeatable: canReread(),
+			refresh: async () => void (await reread()),
+
+			async list() {
+				const open = openedFolder();
+				if (!open) {
+					throw new NoSourceError('No folder is open. The browser forgets one on every reload.');
+				}
+				return {
+					entries: listFolder(open),
+					source: 'this machine',
+					mayBeStale: false,
+					branch: (await readBranch(open)) ?? 'working tree'
+				};
+			},
+
+			read: (path) => readFile(path),
+			assetUrl
+		};
+	}
+};
+
 /** Reads one file, the way a fetch of a raw URL would. */
-export async function readFile(path: string): Promise<string | null> {
+async function readFile(path: string): Promise<string | null> {
 	const file = opened?.files.get(path);
 	return file ? file.text() : null;
 }

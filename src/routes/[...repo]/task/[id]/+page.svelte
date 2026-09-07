@@ -2,8 +2,8 @@
 	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { formatRepoPath, isLocal } from '#lib/repo/ref.ts';
-	import { blobUrl } from '#lib/sources/github.ts';
+	import { formatRepoPath } from '#lib/repo/ref.ts';
+	import { openSource } from '#lib/sources/open.ts';
 	import {
 		renderInline,
 		renderMarkdown,
@@ -72,8 +72,10 @@
 	 * of which this viewer computes: the format holds no modification date, and
 	 * asking the API for one costs a request per task.
 	 */
+	// Absent for a folder on this machine, which is the source saying there is no
+	// page anywhere to link this file to — rather than this view knowing that.
 	const fileUrl = $derived(
-		isLocal(ref) ? null : blobUrl(ref, repo.branch, `tasks/${id}/TASK.md`)
+		openSource(ref, { branch: repo.branch })?.fileUrl?.(`tasks/${id}/TASK.md`) ?? null
 	);
 
 	const listHref = $derived(resolve('/[...repo]/list', { repo: formatRepoPath(ref) }));

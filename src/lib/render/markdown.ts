@@ -14,9 +14,7 @@
  */
 import MarkdownIt from 'markdown-it';
 import type { RepoRef } from '../repo/ref.ts';
-import { isLocal } from '../repo/ref.ts';
-import { assetUrl } from '../sources/local.ts';
-import { rawUrl } from '../sources/github.ts';
+import { openSource } from '../sources/open.ts';
 
 export interface RenderOptions {
 	ref: RepoRef;
@@ -54,11 +52,9 @@ export function resolveAttachment(options: RenderOptions, url: string): string |
 	const path = stack.join('/');
 	// Anything outside tasks/ is not an attachment of this repository's tasks.
 	if (!path.startsWith('tasks/')) return null;
-	// A folder on this machine has no raw endpoint. A `blob:` made from the file
-	// the reader gave access to is the same thing by other means, and it is why
-	// this returns a URL rather than building one: only the source knows how.
-	if (isLocal(options.ref)) return assetUrl(path);
-	return rawUrl(options.ref, options.branch, path);
+	// Only the source knows how one of its files becomes a URL: a raw endpoint
+	// for a forge, a `blob:` for a file already in memory.
+	return openSource(options.ref, { branch: options.branch })?.assetUrl(path) ?? null;
 }
 
 function createRenderer(options: RenderOptions): InstanceType<typeof MarkdownIt> {

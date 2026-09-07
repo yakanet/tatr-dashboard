@@ -22,16 +22,10 @@ import { readTask, type Task } from '../tatr/task.ts';
 import { parseTaskMd } from '../tatr/task-md.ts';
 import { parseTagsFile, type TagDescriptions } from '../tatr/tags-file.ts';
 import { isValidHuid } from '../tatr/huid.ts';
-import { describeRef, isLocal, repoKey, type RepoRef } from '../repo/ref.ts';
-import { github, rawUrl } from './github.ts';
-import { jsdelivr } from './jsdelivr.ts';
-import { ungh } from './ungh.ts';
-import { listFolder, openedFolder, readBranch, readFile, reread } from './local.ts';
+import { describeRef, type RepoRef } from '../repo/ref.ts';
+import { openSource } from './open.ts';
 import { openStore, type RepoStore } from './store.ts';
 import { ProviderError, type Listing, type Provider } from './provider.ts';
-
-/** Tried in order. GitHub first so the normal path depends on nobody else. */
-export const PROVIDERS: Provider[] = [github, ungh, jsdelivr];
 
 export interface LoadOptions {
 	providers?: Provider[];
@@ -79,31 +73,6 @@ export class NoTasksFolderError extends Error {
 		super(`${describeRef(ref)} has no tasks/ folder at its root`);
 		this.name = 'NoTasksFolderError';
 	}
-}
-
-/** Thrown when the local view is reached with no folder open — after a reload. */
-export class NoFolderError extends Error {
-	constructor() {
-		super('No folder is open. The browser forgets one on every reload.');
-		this.name = 'NoFolderError';
-	}
-}
-
-/** Lists a repository, falling back through the providers in order. */
-export async function listRepository(ref: RepoRef, options: LoadOptions = {}): Promise<Listing> {
-	const providers = options.providers ?? PROVIDERS;
-	let lastError: unknown;
-
-	for (const provider of providers) {
-		try {
-			return await provider.list(ref, options.signal);
-		} catch (error) {
-			// A missing repository is the same everywhere; do not ask the others.
-			if (error instanceof ProviderError && error.failure === 'not-found') throw error;
-			lastError = error;
-		}
-	}
-	throw lastError ?? new Error('No provider could list the repository');
 }
 
 /** Runs `worker` over `items` with a bounded number in flight. */
@@ -168,122 +137,82 @@ function assemble(
 const TASK_FILE = /^tasks\/[^/]+\/TASK\.md$/;
 
 /**
- * Reads the folder the reader has open.
+ * Loads a repository, or the folder the reader has open: one path, because the
+ * source answers for what used to be branched on here.
  *
- * Nothing is cached, and that is not an omission: the cache exists to protect
- * an API budget this source does not spend — reading the whole folder was
- * measured at about ten milliseconds — and a stored copy of a folder someone
- * is editing would be wrong before it was written.
+ * `cacheKey` is the whole of it. A source that spends an API budget names a
+ * place to be cached, and the reader's quota is protected; a source that reads
+ * a folder for nothing answers null, and there is no cache to go stale.
  */
-async function loadOpenFolder(ref: RepoRef, options: LoadOptions): Promise<LoadResult> {
-	// A refresh rereads the folder where a handle was kept; where one was not,
-	// this returns what is already open and the view offers to reopen instead.
-	const folder = options.refresh ? await reread() : openedFolder();
-	if (!folder) throw new NoFolderError();
-
-	const entries = listFolder(folder);
-	if (!entries.some((entry) => entry.path.startsWith('tasks/'))) throw new NoTasksFolderError(ref);
-
-	const taskFiles = entries.filter((entry) => TASK_FILE.test(entry.path));
-	const attachments = collectAttachments(entries);
-
-	let done = 0;
-	const contents = await Promise.all(
-		taskFiles.map(async (entry) => {
-			const text = await readFile(entry.path);
-			options.onProgress?.(++done, taskFiles.length);
-			return { path: entry.path, text };
-		})
-	);
-
-	return {
-		...assemble(contents, attachments),
-		tags: parseTagsFile((await readFile('tasks/tags')) ?? ''),
-		source: 'this machine',
-		mayBeStale: false,
-		fromCache: false,
-		storedAt: options.now?.() ?? Date.now(),
-		// A working tree has no reference the way a forge does; `.git/HEAD` still
-		// names the branch, and says so rather than inventing one.
-		branch: (await readBranch(folder)) ?? 'working tree',
-		previous: null,
-		label: folder.name
-	};
-}
-
 export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): Promise<LoadResult> {
-	if (isLocal(ref)) return loadOpenFolder(ref, options);
+	const source = openSource(ref, { fetchImpl: options.fetchImpl, providers: options.providers });
+	if (!source) {
+		throw new ProviderError('unsupported-host', ref.host, `${ref.host} is not served`);
+	}
 
-	const key = repoKey(ref);
+	// For a forge a refresh is this function ignoring the cache; for a folder it
+	// is the folder being walked again, which only the source can do.
+	if (options.refresh) await source.refresh?.();
+
 	const store = options.store ?? openStore();
+	const key = source.cacheKey;
 
-	if (!options.refresh) {
+	if (key && !options.refresh) {
 		const cached = await store.read<CachedLoad>(key);
 		// IndexedDB stores structured clones, so Date and Map come back intact.
 		if (cached) {
 			return {
 				...cached.value,
-				// A record written before this field existed simply has nothing behind it.
+				// A record written before this field existed has nothing behind it.
 				previous: cached.value.previous ?? null,
 				fromCache: true,
 				storedAt: cached.storedAt,
-				label: describeRef(ref)
+				label: source.label
 			};
 		}
 	}
 
 	// What the reader last saw, read before the write that loses it. Only a
 	// refresh has anything behind it: a first visit is not a comparison.
-	const seen = options.refresh ? await store.read<CachedLoad>(key) : null;
+	const seen = key && options.refresh ? await store.read<CachedLoad>(key) : null;
 
-	const doFetch = options.fetchImpl ?? fetch;
-	const listing = await listRepository(ref, options);
-
+	const listing = await source.list(options.signal);
 	const taskFiles = listing.entries.filter((entry) => TASK_FILE.test(entry.path));
-	// Free: the whole tree came down in the listing request, and these are the
-	// entries that were being discarded.
+	// Free: the whole tree came down in the listing, and these are the entries
+	// that were being discarded.
 	const attachments = collectAttachments(listing.entries);
-	const hasTasksFolder = listing.entries.some((entry) => entry.path.startsWith('tasks/'));
-	if (!hasTasksFolder) throw new NoTasksFolderError(ref);
-
-	const read = async (path: string): Promise<string | null> => {
-		try {
-			const response = await doFetch(rawUrl(ref, listing.branch, path), { signal: options.signal });
-			return response.ok ? await response.text() : null;
-		} catch {
-			return null;
-		}
-	};
+	if (!listing.entries.some((entry) => entry.path.startsWith('tasks/'))) {
+		throw new NoTasksFolderError(ref);
+	}
 
 	let done = 0;
-	const contents = await pooled(taskFiles, options.concurrency ?? 12, async (entry) => {
-		const text = await read(entry.path);
+	const contents = await pooled(taskFiles, options.concurrency ?? source.concurrency, async (entry) => {
+		const text = await source.read(entry.path, options.signal);
 		options.onProgress?.(++done, taskFiles.length);
 		return { path: entry.path, text };
 	});
 
-	const { tasks, skipped } = assemble(contents, attachments);
-
 	// Tag descriptions are optional, and their absence is not an error.
 	const tagsFile = listing.entries.some((entry) => entry.path === 'tasks/tags')
-		? await read('tasks/tags')
+		? await source.read('tasks/tags', options.signal)
 		: null;
-	const tags = parseTagsFile(tagsFile ?? '');
 
 	const storedAt = options.now?.() ?? Date.now();
 	const payload: CachedLoad = {
-		tasks,
-		skipped,
-		tags,
+		...assemble(contents, attachments),
+		tags: parseTagsFile(tagsFile ?? ''),
 		source: listing.source,
 		mayBeStale: listing.mayBeStale,
 		branch: listing.branch,
 		previous: seen ? snapshot(seen.value.tasks, seen.storedAt) : null
 	};
-	await store.write(key, { ...payload, tasks: withoutDescriptions(tasks) }, storedAt);
+
+	if (key) {
+		await store.write(key, { ...payload, tasks: withoutDescriptions(payload.tasks) }, storedAt);
+	}
 
 	// The caller gets the bodies it just paid for; only the cache goes without.
-	return { ...payload, fromCache: false, storedAt, label: describeRef(ref) };
+	return { ...payload, fromCache: false, storedAt, label: source.label };
 }
 
 /**
@@ -297,20 +226,10 @@ export async function loadTaskDescription(
 	id: string,
 	options: { fetchImpl?: typeof fetch; signal?: AbortSignal } = {}
 ): Promise<string | null> {
-	// A folder is already in memory; there is nothing to re-fetch.
-	if (isLocal(ref)) {
-		const text = await readFile(`tasks/${id}/TASK.md`);
-		return text === null ? null : parseTaskMd(text).description;
-	}
-
-	const doFetch = options.fetchImpl ?? fetch;
-	try {
-		const response = await doFetch(rawUrl(ref, branch, `tasks/${id}/TASK.md`), {
-			signal: options.signal
-		});
-		if (!response.ok) return null;
-		return parseTaskMd(await response.text()).description;
-	} catch {
-		return null;
-	}
+	// One read, wherever the file is: a fetch of a raw URL, or a file already in
+	// memory. The branch is passed rather than assumed, being what the reading
+	// resolved.
+	const source = openSource(ref, { branch, fetchImpl: options.fetchImpl });
+	const text = await source?.read(`tasks/${id}/TASK.md`, options.signal);
+	return text ? parseTaskMd(text).description : null;
 }

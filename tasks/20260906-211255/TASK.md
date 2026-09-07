@@ -80,3 +80,134 @@ Worth deciding while writing it: the differential fixtures replay one GitHub
 repository, and the conformance tests must stay about the *format* rather than
 about a forge, or a second implementation will have nothing to be tested
 against.
+
+---
+
+A proposal, now that 20260907-122228 is built and there are two sources to
+generalise from rather than one to imagine.
+
+**The thing to name is a source, not a forge.** A folder on the disk is not a
+forge and reads tasks perfectly well; a forge is a source that also has URLs, a
+budget, a branch and an address other people can follow. Naming the interface
+after the smaller idea is what keeps the local source from being a permanent
+exception.
+
+    /** Everything a reading of tasks needs, whatever it is a reading of. */
+    export interface Source {
+        /** `github`, `local`. The UI picks a mark by it; nothing else may. */
+        readonly id: string;
+
+        /** What the reading calls itself: `owner/name`, or a folder's name. */
+        readonly label: string;
+
+        /** Where this reading may be cached, or null when it must not be. */
+        readonly cacheKey: string | null;
+
+        /** How many reads at once this source likes: politeness to a CDN, and
+         *  nothing at all to a disk. */
+        readonly concurrency: number;
+
+        /** Every file it holds, once. Throws SourceError. */
+        list(signal?: AbortSignal): Promise<Listing>;
+
+        /** One file as text, or null when it cannot be read. */
+        read(path: string, signal?: AbortSignal): Promise<string | null>;
+
+        /** A URL the browser can put in an `<img>` or a link: a raw endpoint,
+         *  or a `blob:` for a file already in memory. */
+        assetUrl(path: string): string | null;
+
+        /** The file's own page, where its history is. Absent by design for a
+         *  folder: there is nothing to link to. */
+        fileUrl?(path: string): string;
+    }
+
+`cacheKey: string | null` is the shape worth arguing for: "this must not be
+cached" stops being a branch in the loader and becomes something the source
+declares. The local source answers null and the whole question is settled.
+
+`id` rather than a logo. A component in a data interface would drag Svelte into
+`lib/sources`, and the mark is a UI decision about an id — so the interface says
+what it is and the UI keeps a registry of marks.
+
+**A kind, above the instance, for choosing between them.** Recognising a
+reference is not something an instance can do; it is what decides which instance
+to build.
+
+    export interface SourceKind {
+        readonly id: string;
+        /** Whether this kind serves the reference: a host it answers for, or
+         *  the local marker. Cannot be a closed list of hosts — a self-hosted
+         *  Gitea is on whatever domain its owner chose. */
+        claims(ref: RepoRef): boolean;
+        open(ref: RepoRef): Source;
+    }
+
+    const KINDS: SourceKind[] = [github, local];
+    export function openSource(ref: RepoRef): Source | null;
+
+**`Provider` stays, one storey down.** Today's three are all GitHub — its API,
+ungh proxying it, jsDelivr caching it — so they are what a *forge* falls back
+through, not sources. `github.list()` keeps that ordered list inside itself, and
+a new forge starts with one lister and no fallback. Which means `Listing` has to
+keep saying which one answered, and stay sensible when the answer is always the
+same.
+
+**Two changes to `Listing` while it is open.** `mayBeStale` is not the only way a
+listing can be less than the truth: GitHub's tree API caps large repositories,
+which is *incomplete*, not late. Those want to be two fields, `mayBeStale` and
+`complete`, because the sentence shown to the reader is different — one says the
+copy may be behind, the other says tasks are missing.
+
+**And `RepoRef` is still the real work**, which no interface hides: `owner` and
+`name` are a GitHub shape, GitLab nests groups arbitrarily deep, so the
+reference wants a path rather than a pair. `SEGMENT`, `parseRepoPath`, `repoKey`
+and every URL builder touch it.
+
+Out of scope, deliberately: credentials, and writing. This viewer never writes,
+and a source that could would be a different program.
+
+---
+
+Proved on the `source-interface` branch, by writing it for the two sources that
+exist and making the loader consume nothing else. The suite is the verdict: 549
+tests unchanged and green, five added for the registry, and `loadRepository` has
+one path where it had two. All four URL call sites go through the source, and
+`isLocal` is gone from the loader and from the renderer.
+
+Four corrections the interface needed, none of them visible from the proposal:
+
+- **`branch` cannot be a member.** A working tree reads its own out of
+  `.git/HEAD`, asynchronously, so no synchronous member can answer. A forge
+  captures one when it is opened and builds every URL with it; which branch was
+  read is a fact about the reading, and `Listing` already carries it.
+- **Two members were missing, both about repeating a reading.** `repeatable`
+  says whether Refresh means anything — a forge always, a folder only where a
+  handle was kept — and `refresh?()` is the folder being walked again. They
+  deleted a `canReread()` check in the layout and the loader's local branch.
+- **A failure had to move into the contract.** `NoSourceError`: a source that
+  exists with nothing behind it, which a forge cannot be and a folder is after
+  every reload. It lives beside the interface so a source can throw it without
+  importing the loader.
+- **`listRepository` and `PROVIDERS` belong to GitHub**, as this task predicted,
+  and moving them was not optional: leaving them in the loader made a cycle,
+  load → open → github → load.
+
+Two `isLocal` survive, both in views, and both are about *presenting* a local
+source rather than reading one: offering the folder picker in the failure panel,
+and showing a folder's name where a forge shows its URL form. That is the right
+home for the last of that knowledge.
+
+One thing the interface tidied on its own: five of `local.ts`'s exports have no
+reader outside it any more — the session is reached through the source now, so
+only opening and closing a folder leave the module. A surface that shrinks
+without anything being deleted is the sign the abstraction sits in the right
+place.
+
+`OpenOptions` carries `providers` and `fetchImpl` purely as test seams. Worth
+admitting rather than dressing up: the alternative was a module-level registry
+for the tests to mutate.
+
+Not attempted, deliberately: `RepoRef`'s owner-and-name shape, which is still
+the real work; the split of `mayBeStale` from `complete`; and the mark registry,
+which now has an id to key on.
