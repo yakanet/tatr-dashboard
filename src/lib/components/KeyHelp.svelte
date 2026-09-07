@@ -5,6 +5,15 @@
 
 	let panel = $state<HTMLElement | null>(null);
 
+	/**
+	 * A page with no views does not advertise a way to switch between them.
+	 * The homepage is one: it lists repositories, and `1`-`9` mean nothing
+	 * there.
+	 */
+	const shown = $derived(
+		views.length > 0 ? BINDINGS : BINDINGS.filter((binding) => binding.keys !== '1 … 9')
+	);
+
 	// Opened from the keyboard, so it has to be closable from the keyboard.
 	$effect(() => {
 		panel?.focus();
@@ -41,7 +50,7 @@
 	>
 		<h2>Keyboard</h2>
 		<dl>
-			{#each BINDINGS as binding (binding.keys)}
+			{#each shown as binding (binding.keys)}
 				<div class="row">
 					<dt><kbd>{binding.keys}</kbd></dt>
 					<dd>{binding.does}</dd>

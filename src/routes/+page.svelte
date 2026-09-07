@@ -2,7 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import FolderPicker from '#lib/components/FolderPicker.svelte';
+	import KeyHelp from '#lib/components/KeyHelp.svelte';
 	import Mark from '#lib/components/Mark.svelte';
+	import Shortcuts from '#lib/components/Shortcuts.svelte';
 	import { formatRepoPath, parseRepoInput } from '#lib/repo/ref.ts';
 	import { toSuggestions, type CachedShape, type Suggestion } from '#lib/repo/recent.ts';
 	import { folderAccess } from '#lib/sources/local.ts';
@@ -23,6 +25,8 @@
 	const access = folderAccess();
 	let input = $state('');
 	let error = $state<string | null>(null);
+
+	let helping = $state(false);
 
 	/** Arrow keys move between tabs, which is what makes them tabs. */
 	function move(event: KeyboardEvent) {
@@ -81,6 +85,16 @@
 	<title>tatr dashboard</title>
 </svelte:head>
 
+<!-- The page a reader arrives on was the only one without a keyboard. There is
+     no nav here to switch between, so `1`-`9` stay unwired rather than being
+     given something invented for them; what is left is walking the
+     repositories, opening one, `/` for the box, and `?` for the list. -->
+<Shortcuts onhelp={() => (helping = !helping)} ondismiss={() => (helping = false)} modal={helping} />
+
+{#if helping}
+	<KeyHelp views={[]} onclose={() => (helping = false)} />
+{/if}
+
 <main>
 	<p class="brand"><Mark size={26} /> <span>tatr dashboard</span></p>
 
@@ -123,6 +137,7 @@
 						bind:value={input}
 						placeholder="owner/name"
 						aria-label="Repository"
+						data-key-search
 						autocapitalize="off"
 						autocorrect="off"
 						autocomplete="off"
@@ -179,7 +194,7 @@
 			<ul>
 				{#each suggestions as one (one.path)}
 					<li>
-						<a href={resolve('/[...repo]', { repo: one.path })}>
+						<a href={resolve('/[...repo]', { repo: one.path })} data-key-row>
 							<span class="path mono">{one.path}</span>
 							<span class="about">
 								{describe(one)}
