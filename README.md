@@ -113,12 +113,11 @@ behind the same IP address, so:
   repositories that still call it `master`.
 - **Contents come from a CDN.** `raw.githubusercontent.com` does not count
   against the API quota at all.
-- **Hitting the limit anyway is not the end.** The page falls back to two
-  mirrors — `ungh.cc`, which proxies the API with its own credentials, then
-  jsDelivr, which serves a cached copy — rather than showing you an error, and
-  says so when what it found may be behind. Those two are the only requests
-  this site makes to anyone but GitHub, they carry nothing but the repository
-  name, and they happen only when the budget is already spent.
+- **Hitting the limit anyway is not the end.** The page asks `ungh.cc`, which
+  proxies the same API with its own credentials, rather than showing you an
+  error. That is the only request this site makes to anyone but GitHub, it
+  carries nothing but the repository name, and it happens only when the budget
+  is already spent.
 - **A refresh that fails costs you nothing.** The reading you were looking at
   stays on screen and the header says it was not renewed, rather than trading a
   true copy for an error page.

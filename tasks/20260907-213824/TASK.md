@@ -47,3 +47,23 @@ spent).
 What is left for whoever revisits it: jsDelivr's remaining job is a first visit,
 budget spent, with ungh also down — and it serves a copy measured at 63 tasks of
 64. Worth rejudging against 53 lines and one third party, but not today.
+
+---
+
+jsDelivr is gone, judged rather than kept: two third parties for one case is
+more machinery than a viewer of task folders needs. Its remaining job would
+have been a first visit, with the budget spent, and ungh also down — answered
+with a copy measured at 63 tasks of 64.
+
+What its removal exposed is worth more than the 53 lines. **`mayBeStale` can no
+longer be true**: the API lister, ungh and a folder all answer false, so the
+field and the header clause that prints it — `· ungh may be behind` — are
+waiting for a lister that does not exist. And that clause is the only reader
+`Listing.source` has, so "which one answered" goes quiet with it.
+
+Left in place, with the state of affairs written where each is declared, because
+removing the pair is a decision about what the page promises rather than
+cleanup. It also depends on a bigger one: ungh going too would leave a single
+lister, and with it `Provider`, `PROVIDERS` and the fallback loop would all have
+nothing left to do.
+

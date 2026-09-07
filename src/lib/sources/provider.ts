@@ -19,7 +19,14 @@ export interface Listing {
 	entries: TreeEntry[];
 	/** Which provider answered, so the UI can say when data may be stale. */
 	source: string;
-	/** True when the provider is known to serve a cached, possibly late, view. */
+	/**
+	 * True when the provider is known to serve a cached, possibly late, view.
+	 *
+	 * No lister answers true since jsDelivr was dropped, which leaves this and
+	 * the sentence the UI prints for it waiting for a lister that serves a
+	 * cached copy. Removing the pair is a decision of its own: it is the only
+	 * reader `source` has.
+	 */
 	mayBeStale: boolean;
 	/** Branch the listing was taken from, once resolved. */
 	branch: string;

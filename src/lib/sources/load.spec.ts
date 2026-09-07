@@ -84,7 +84,7 @@ describe('provider fallback', () => {
 
 	it('reports staleness so the UI can say so', async () => {
 		const listing = await listRepository(ref, {
-			providers: [fakeProvider('jsdelivr', { mayBeStale: true })]
+			providers: [fakeProvider('a cached mirror', { mayBeStale: true })]
 		});
 		expect(listing.mayBeStale).toBe(true);
 	});

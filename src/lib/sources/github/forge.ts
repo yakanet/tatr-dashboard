@@ -2,11 +2,10 @@
  * GitHub as a source: the listers it falls through, its URL shapes, and the
  * reference it reads by default.
  *
- * The three listers are all GitHub — its own API, ungh proxying it, jsDelivr
- * serving a cached copy of it — so they are not three sources but one forge's
- * fallback order, which is why they sit in this folder and why the list belongs
- * here rather than inside any one of them. A second forge would start with one
- * lister and no fallback.
+ * Both listers are GitHub — its own API, and ungh proxying it — so they are not
+ * two sources but one forge's fallback order, which is why they sit in this
+ * folder and why the list belongs here rather than inside either of them. A
+ * second forge would start with one lister and no fallback.
  *
  * File contents are read from raw.githubusercontent.com, which is a CDN and
  * sends no rate-limit headers at all: 64 files fetched in parallel came back in
@@ -16,7 +15,6 @@
 import { repoKey, type RepoRef } from '../../repo/ref.ts';
 import { ProviderError, type Listing, type Provider } from '../provider.ts';
 import { github } from './api.ts';
-import { jsdelivr } from './jsdelivr.ts';
 import { ungh } from './ungh.ts';
 import type { OpenOptions, Source, SourceKind } from '../source.ts';
 
@@ -74,10 +72,15 @@ function blobUrl(ref: RepoRef, branch: string, path: string): string {
 
 /**
  * The listers this forge falls back through, in order. GitHub first so the
- * normal path depends on nobody else; the other two are mirrors *of GitHub*,
- * which is why they belong to it rather than standing beside it as sources.
+ * normal path depends on nobody else; ungh is a mirror *of GitHub*, which is
+ * why it belongs to it rather than standing beside it as a source.
+ *
+ * jsDelivr was a third, and was dropped: it only ever answered when GitHub and
+ * ungh had both failed, and it answered with a cached view — 63 of this
+ * repository's 64 tasks when measured, missing the newest. Two third parties
+ * for that last case was more machinery than a reader of task folders needs.
  */
-export const PROVIDERS: Provider[] = [github, ungh, jsdelivr];
+export const PROVIDERS: Provider[] = [github, ungh];
 
 /**
  * Lists a repository, falling back through the listers in order.

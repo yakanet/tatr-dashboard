@@ -2,9 +2,8 @@
  * Loads a repository's tasks: list once, then read the task files in parallel.
  *
  * Only the listing can be rate-limited, so providers are tried in order —
- * GitHub, then ungh, then jsDelivr — and the result reports which one answered
- * and whether it may be stale. Contents always come from raw.githubusercontent,
- * which imposes no budget.
+ * GitHub, then ungh — and the result reports which one answered. Contents
+ * always come from raw.githubusercontent, which imposes no budget.
  *
  * A loaded repository is cached and never expires on its own: quota is only ever
  * spent on a first visit or on an explicit refresh, so the reader decides when
