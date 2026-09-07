@@ -33,7 +33,20 @@ export interface RepoStore {
 	read<T>(key: string): Promise<StoredRepo<T> | null>;
 	write<T>(key: string, value: T, now?: number): Promise<void>;
 	clear(key?: string): Promise<void>;
+	/**
+	 * Everything held, newest first, for the homepage's list of repositories
+	 * already read.
+	 *
+	 * It reads the values rather than only the keys, because what a card shows —
+	 * how many tasks, how many open — lives in them. That means loading the whole
+	 * cache: about 45 kB per repository, from local storage, which is nothing next
+	 * to the request a card would otherwise cost. A cache large enough for that to
+	 * matter would want a separate index of counts.
+	 */
+	list<T>(): Promise<{ key: string; value: T; storedAt: number }[]>;
 }
+
+const newestFirst = (a: { storedAt: number }, b: { storedAt: number }) => b.storedAt - a.storedAt;
 
 /** A store that lives for the lifetime of the page. Always available. */
 export function memoryStore(): RepoStore {
@@ -48,6 +61,11 @@ export function memoryStore(): RepoStore {
 		async clear(key?: string) {
 			if (key === undefined) map.clear();
 			else map.delete(key);
+		},
+		async list<T>() {
+			return [...map.entries()]
+				.map(([key, stored]) => ({ key, value: stored.value as T, storedAt: stored.storedAt }))
+				.sort(newestFirst);
 		}
 	};
 }
@@ -119,6 +137,21 @@ export function openStore(): RepoStore {
 			const handle = await database();
 			if (!handle) return fallback.write(key, value, now);
 			await transact('readwrite', (store) => store.put({ value, storedAt: now }, key));
+		},
+
+		async list<T>() {
+			const handle = await database();
+			if (!handle) return fallback.list<T>();
+
+			const keys = await transact<IDBValidKey[]>('readonly', (store) => store.getAllKeys());
+			const values = await transact<StoredRepo<T>[]>('readonly', (store) => store.getAll());
+			if (!keys || !values || keys.length !== values.length) return [];
+
+			return keys
+				.map((key, i) => ({ key: String(key), value: values[i].value, storedAt: values[i].storedAt }))
+				// A row written by an older version may have no timestamp at all.
+				.filter((row) => typeof row.storedAt === 'number')
+				.sort(newestFirst);
 		},
 
 		async clear(key?: string) {

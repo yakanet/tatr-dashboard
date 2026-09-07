@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import KeyHelp from '#lib/components/KeyHelp.svelte';
+	import Mark from '#lib/components/Mark.svelte';
 	import Shortcuts from '#lib/components/Shortcuts.svelte';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
 	import { RepositoryState, describeAge, REPOSITORY } from '#lib/state/repository.svelte.ts';
@@ -71,7 +72,7 @@
 	     aligned on their shared baseline: centring them instead lines up the
 	     middle of each box, which leaves the smaller type sitting low. -->
 	<div class="identity">
-		<a class="brand" href={resolve('/')}>tatr</a>
+		<a class="brand" href={resolve('/')}><Mark size={18} /> tatr</a>
 		<span class="repo">{path}</span>
 
 		<nav>
@@ -113,6 +114,9 @@
 	}
 
 	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
 		font-weight: 600;
 		color: var(--fg);
 	}
