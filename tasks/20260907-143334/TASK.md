@@ -26,7 +26,7 @@ reading it once looks like it worked and silently loses the rest. Like the
 directory input, it yields no handle, so such a folder is a snapshot.
 
 **And it may avoid the question the input asks.** A drop is itself the gesture,
-so there should be no *"import 7,775 files?"* count dialog — the thing that made
+so there should be no *"import xxxx files?"* count dialog — the thing that made
 20260907-122228 accept a picked `tasks/` folder in the first place. Worth
 confirming before it is claimed on screen: if it holds, dropping becomes the
 path to recommend for a browser without the picker.
