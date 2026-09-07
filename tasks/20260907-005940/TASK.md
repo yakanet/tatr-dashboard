@@ -1,6 +1,6 @@
 # The board has no filter bar
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 80
 - TAGS: ui,tql
 
@@ -25,3 +25,24 @@ settle:
   hiding closed tasks would empty it. Either the toggle disappears on this view
   or it hides the column outright, which is arguably what a reader asking for
   open tasks wants.
+
+---
+
+Done, and both open questions turned out to have one answer each.
+
+**Headers say `3 / 21`.** `toColumns` takes the query as a predicate applied
+*within* a column rather than before it, so a card is counted in the column it
+belongs to whether or not it matched — the query can narrow a column and never
+move a card between two. `:tql` with closed shown reads Backlog 2/21, In
+progress 0/2, Done 6/41.
+
+**The closed toggle hides the Done column.** Passing the query through `apply`
+would have dropped closed tasks before the columns existed, emptying Done rather
+than narrowing it — a column headed "closed" holding nothing. Hiding it outright
+is what a reader asking for open tasks means on a board, and it leaves every
+remaining header true to its contents. `QueryState` gained `matches(task)` for
+this, the query without the status filter, and `apply` is now that plus the
+filter rather than a second implementation.
+
+The query is shared with the list, so a filter set in either is there in the
+other, which is how the rest of the product already behaves.

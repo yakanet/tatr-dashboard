@@ -42,10 +42,22 @@ export class QueryState {
 		return this.#compiled.warnings;
 	}
 
+	/**
+	 * Whether one task satisfies the query, ignoring the closed toggle.
+	 *
+	 * The board needs the two apart: its Done column *is* the closed tasks, so
+	 * filtering them out before the columns are built would empty it rather than
+	 * narrow it. An unparsable query matches everything, so a half-typed one
+	 * leaves the screen alone instead of blanking it.
+	 */
+	matches(task: Task): boolean {
+		return this.#compiled.error ? true : this.#compiled.match(task);
+	}
+
 	/** Applies the query to a set of tasks, honouring the closed toggle. */
 	apply(tasks: Task[]): Task[] {
 		const pool = this.showClosed ? tasks : tasks.filter((task) => !task.closed);
-		return this.#compiled.error ? pool : pool.filter((task) => this.#compiled.match(task));
+		return pool.filter((task) => this.matches(task));
 	}
 
 	/** Adds a term, or removes it when it is already the whole query. */

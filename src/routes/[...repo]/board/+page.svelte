@@ -1,20 +1,59 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import QueryBar from '#lib/components/QueryBar.svelte';
 	import RepoStatus from '#lib/components/RepoStatus.svelte';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
 	import { renderInline } from '#lib/render/markdown.ts';
+	import { QUERY, type QueryState } from '#lib/state/query.svelte.ts';
 	import { REPOSITORY, type RepositoryState } from '#lib/state/repository.svelte.ts';
 	import { toColumns } from '#lib/tatr/board.ts';
+	import { byTag } from '#lib/tatr/stats.ts';
 	import type { Task } from '#lib/tatr/task.ts';
 
 	let { data } = $props();
 	const ref = $derived(data.ref);
 	const repo = getContext<RepositoryState>(REPOSITORY);
 
-	// The whole repository: a board with its Done column filtered away is a list
-	// with extra steps.
-	const columns = $derived(toColumns(repo.tasks));
+	// Shared with the list, so a filter set in one is still there in the other.
+	const query = getContext<QueryState>(QUERY);
+
+	/*
+	 * The query narrows each column; the closed toggle removes one.
+	 *
+	 * `apply` would drop closed tasks before the columns exist, which empties Done
+	 * rather than narrowing it. So the query goes in as a predicate and the toggle
+	 * is answered by hiding the column outright — which is what a reader asking
+	 * for open tasks means on a board, and keeps every header true to its
+	 * contents.
+	 */
+	const columns = $derived(
+		toColumns(repo.tasks, (task) => query.matches(task)).filter(
+			(column) => query.showClosed || column.key !== 'done'
+		)
+	);
+
+	const matched = $derived(columns.reduce((n, column) => n + column.tasks.length, 0));
+	const pool = $derived(columns.reduce((n, column) => n + column.total, 0));
+
+	const tagOptions = $derived(
+		byTag(query.showClosed ? repo.tasks : repo.open).map(({ tag, count }) => ({
+			name: tag,
+			description: repo.tags.descriptions.get(tag),
+			count
+		}))
+	);
+
+	function syncUrl() {
+		const url = new URL(page.url.href);
+		if (query.text.trim()) url.searchParams.set('q', query.text.trim());
+		else url.searchParams.delete('q');
+		if (query.showClosed) url.searchParams.set('closed', '1');
+		else url.searchParams.delete('closed');
+		replaceState(url, page.state);
+	}
 
 	const taskHref = (id: string) =>
 		resolve('/[...repo]/task/[id]', { repo: formatRepoPath(ref), id });
@@ -27,6 +66,8 @@
 	<title>{ref.owner}/{ref.name} — board</title>
 </svelte:head>
 
+<QueryBar {query} {matched} {pool} tags={tagOptions} onchange={syncUrl} />
+
 <main>
 	<RepoStatus {repo} {ref} />
 
@@ -36,7 +77,11 @@
 				<section class="column">
 					<header>
 						<h2>{column.name}</h2>
-						<span class="tally mono">{column.tasks.length}</span>
+						<span class="tally mono">
+							{column.tasks.length}{#if column.tasks.length !== column.total}<span class="of"
+									>&thinsp;/&thinsp;{column.total}</span
+								>{/if}
+						</span>
 						<span class="hint">{column.hint}</span>
 					</header>
 
@@ -75,7 +120,7 @@
 	main {
 		max-width: 84rem;
 		margin: 0 auto;
-		padding: 1.75rem 1.5rem 4rem;
+		padding: 1.5rem 1.5rem 4rem;
 	}
 
 	.board {
@@ -111,7 +156,7 @@
 		   scrolls the other two headers off the top — and a board whose columns
 		   cannot be compared is a list. Each scrolls on its own instead, which is
 		   also what `j`/`k` expect: scrollIntoView finds the nearest scroll box. */
-		max-height: calc(100vh - 8rem);
+		max-height: calc(100vh - 11rem);
 	}
 
 	header {
@@ -131,6 +176,11 @@
 
 	.tally {
 		font-size: 0.8rem;
+		color: var(--ink-2);
+	}
+
+	/* What the query set aside, kept quieter than what it kept. */
+	.of {
 		color: var(--muted);
 	}
 

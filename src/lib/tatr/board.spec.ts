@@ -92,4 +92,47 @@ describe('toColumns', () => {
 	it('always names its columns, so the view need not', () => {
 		expect(toColumns([]).map((column) => column.key)).toEqual(['backlog', 'progress', 'done']);
 	});
+
+	it('totals what a column holds before the query', () => {
+		expect(toColumns(all).map((column) => column.total)).toEqual([21, 2, 41]);
+	});
+});
+
+describe('toColumns under a query', () => {
+	const scoped = (task: Task) => task.tags.includes('scope');
+
+	it('narrows each column and keeps its total', () => {
+		const [backlog, progress, done] = toColumns(all, scoped);
+		expect(progress.tasks).toHaveLength(2);
+		expect(progress.total).toBe(2);
+		// Nothing else in the repository carries the tag, and the totals still say
+		// how much was set aside.
+		expect([backlog.tasks.length, backlog.total]).toEqual([0, 21]);
+		expect([done.tasks.length, done.total]).toEqual([0, 41]);
+	});
+
+	it('leaves the totals alone when nothing matches', () => {
+		const columns = toColumns(all, () => false);
+		expect(columns.map((column) => column.tasks.length)).toEqual([0, 0, 0]);
+		expect(columns.map((column) => column.total)).toEqual([21, 2, 41]);
+	});
+
+	it('counts a task in the column it belongs to, matched or not', () => {
+		// A closed task rejected by the query still raises Done's total, never
+		// Backlog's — the query cannot move a card between columns.
+		const columns = toColumns([make('20260101-000001', 90, [], true)], () => false);
+		expect(columns.map((column) => column.total)).toEqual([0, 0, 1]);
+	});
+
+	it('sorts what survived, not what was there', () => {
+		const columns = toColumns(
+			[
+				make('20260101-000001', 50, ['ui']),
+				make('20260101-000002', 110, []),
+				make('20260101-000003', 90, ['ui'])
+			],
+			(task) => task.tags.includes('ui')
+		);
+		expect(ids(columns[0].tasks)).toEqual(['20260101-000003', '20260101-000001']);
+	});
 });

@@ -27,7 +27,14 @@ export interface Column {
 	name: string;
 	/** What lands here, said plainly enough that nobody has to guess. */
 	hint: string;
+	/** What survived the query. */
 	tasks: Task[];
+	/**
+	 * What the column holds before it. A header reading 21 while showing 3 is a
+	 * lie, and one reading 3 alone loses how much was set aside — so the view can
+	 * say `3 / 21` and neither.
+	 */
+	total: number;
 }
 
 /**
@@ -40,16 +47,29 @@ export interface Column {
  * closest thing to a date we hold, the modification time not being in the
  * format.
  */
-export function toColumns(tasks: readonly Task[]): Column[] {
+export function toColumns(
+	tasks: readonly Task[],
+	/** The query, applied within a column rather than before it, so the totals survive. */
+	matches: (task: Task) => boolean = () => true
+): Column[] {
 	const backlog: Task[] = [];
 	const progress: Task[] = [];
 	const done: Task[] = [];
+	const totals = { backlog: 0, progress: 0, done: 0 };
 
 	for (const task of tasks) {
 		// Closed wins over `scope`: a task left tagged after being finished is
 		// finished, and a card belongs to exactly one column.
-		if (task.closed) done.push(task);
-		else if (task.tags.includes(IN_PROGRESS)) progress.push(task);
+		const key: ColumnKey = task.closed
+			? 'done'
+			: task.tags.includes(IN_PROGRESS)
+				? 'progress'
+				: 'backlog';
+		totals[key] += 1;
+		if (!matches(task)) continue;
+
+		if (key === 'done') done.push(task);
+		else if (key === 'progress') progress.push(task);
 		else backlog.push(task);
 	}
 
@@ -61,19 +81,22 @@ export function toColumns(tasks: readonly Task[]): Column[] {
 			key: 'backlog',
 			name: 'Backlog',
 			hint: 'open, nobody on it',
-			tasks: byPriority(backlog)
+			tasks: byPriority(backlog),
+			total: totals.backlog
 		},
 		{
 			key: 'progress',
 			name: 'In progress',
 			hint: `tagged :${IN_PROGRESS}`,
-			tasks: byPriority(progress)
+			tasks: byPriority(progress),
+			total: totals.progress
 		},
 		{
 			key: 'done',
 			name: 'Done',
 			hint: 'closed, newest first',
-			tasks: done.toSorted((a, b) => compareById(b, a))
+			tasks: done.toSorted((a, b) => compareById(b, a)),
+			total: totals.done
 		}
 	];
 }
