@@ -46,7 +46,23 @@
 	});
 
 	const entries = $derived(body === null ? [] : splitJournal(body));
-	const renderOptions = $derived({ ref, branch: repo.branch, taskId: id });
+
+	const taskHref = (other: string) =>
+		resolve('/[...repo]/task/[id]', { repo: formatRepoPath(ref), id: other });
+
+	const renderOptions = $derived({
+		ref,
+		branch: repo.branch,
+		taskId: id,
+		// An id this repository does not have — most of the ones our tasks cite
+		// are upstream's — would lead a reader to `No such task`, and this task's
+		// own id to the page it is written on. Resolved against the same list the
+		// References panel uses, so a body links exactly what the panel lists.
+		taskUrl: (other: string) =>
+			other !== id && repo.tasks.some((candidate) => candidate.id === other)
+				? taskHref(other)
+				: null
+	});
 	const render = (source: string) => renderMarkdown(source, renderOptions);
 	const inline = (source: string) => renderInline(source, renderOptions);
 
@@ -79,8 +95,6 @@
 	);
 
 	const listHref = $derived(resolve('/[...repo]/list', { repo: formatRepoPath(ref) }));
-	const taskHref = (other: string) =>
-		resolve('/[...repo]/task/[id]', { repo: formatRepoPath(ref), id: other });
 </script>
 
 <svelte:head>

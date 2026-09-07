@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHuid, isValidHuid, parseHuid, scanHuids } from './huid.ts';
+import { formatHuid, isValidHuid, parseHuid, scanHuidSpans, scanHuids } from './huid.ts';
 
 describe('parseHuid', () => {
 	it('reads the timestamp as UTC', () => {
@@ -102,5 +102,23 @@ describe('scanHuids', () => {
 			'20260101-000001',
 			'20260101-000002'
 		]);
+	});
+});
+
+describe('scanHuidSpans', () => {
+	it('says where each id sits, so a renderer can cut there', () => {
+		expect(scanHuidSpans('depends on 20260907-011003 first')).toEqual([
+			{ id: '20260907-011003', start: 11, end: 26 }
+		]);
+	});
+
+	it('every span slices back to its own id', () => {
+		// Which is the reason the positions come out of the scan rather than
+		// being looked up afterwards: the same id can appear where the scanner
+		// does not read one, and a search would link the wrong occurrence.
+		const text = '20260907-01 is not one, 20260907-011003 is, and so is 20260304-115038';
+		const spans = scanHuidSpans(text);
+		expect(spans).toHaveLength(2);
+		for (const span of spans) expect(text.slice(span.start, span.end)).toBe(span.id);
 	});
 });

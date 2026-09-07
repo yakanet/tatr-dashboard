@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseRepoPath } from '../repo/ref.ts';
-import { renderMarkdown, resolveAttachment, splitJournal } from './markdown.ts';
+import { renderInline, renderMarkdown, resolveAttachment, splitJournal } from './markdown.ts';
 
 const options = {
 	ref: parseRepoPath('tsoding/tatr')!,
@@ -114,6 +114,69 @@ describe('attachments', () => {
 	it('keeps an image already pointing at raw', () => {
 		const url = 'https://raw.githubusercontent.com/tsoding/tatr/main/tasks/x/a.png';
 		expect(render(`![x](${url})`)).toContain(url);
+	});
+});
+
+describe('task ids in a body', () => {
+	// The ids the repository being read actually has. The page hands in a builder
+	// that answers for those and `null` for anything else, which is where the
+	// difference between our tasks and the upstream ones they cite lands.
+	const KNOWN = new Set(['20260907-011003', '20260826-200847', '20260907-011003-b']);
+	const linking = {
+		...options,
+		taskUrl: (id: string) =>
+			id !== options.taskId && KNOWN.has(id) ? `/tatr-dashboard/t/${id}` : null
+	};
+	const link = (source: string) => renderMarkdown(source, linking);
+
+	it('links an id the repository has, leaving the sentence around it', () => {
+		expect(link('depends on 20260907-011003 first')).toBe(
+			'<p>depends on <a href="/tatr-dashboard/t/20260907-011003">20260907-011003</a> first</p>\n'
+		);
+	});
+
+	it('links every id in the line', () => {
+		const html = link('20260907-011003 and 20260907-011003-b');
+		expect(html.match(/<a /g)).toHaveLength(2);
+		expect(html).toContain('>20260907-011003-b</a>');
+	});
+
+	it('leaves an id this repository does not have as text', () => {
+		// A real one: our tasks cite upstream's, which resolve nowhere here.
+		const html = link('upstream calls it 20260304-115038');
+		expect(html).not.toContain('<a ');
+		expect(html).toContain('20260304-115038');
+	});
+
+	it('keeps an unresolved id beside a resolved one, rather than dropping it', () => {
+		const html = link('ours is 20260907-011003, upstream 20260304-115038');
+		expect(html.match(/<a /g)).toHaveLength(1);
+		expect(html).toContain('20260304-115038');
+	});
+
+	it('never links the task to the page it is written on', () => {
+		const html = link(`this task is ${options.taskId}`);
+		expect(html).not.toContain('<a ');
+	});
+
+	it('leaves an id in a code span literal', () => {
+		const html = link('run `tatr show 20260907-011003`');
+		expect(html).not.toContain('<a ');
+		expect(html).toContain('<code>tatr show 20260907-011003</code>');
+	});
+
+	it('does not nest an anchor inside a link that already holds an id', () => {
+		const html = link('[see 20260907-011003](https://example.com/x)');
+		expect(html.match(/<a /g)).toHaveLength(1);
+		expect(html).toContain('href="https://example.com/x"');
+	});
+
+	it('links nothing in a title, which is rendered into a row that is a link', () => {
+		expect(renderInline('depends on 20260907-011003', linking)).not.toContain('<a ');
+	});
+
+	it('links nothing when no builder is handed in', () => {
+		expect(render('depends on 20260907-011003')).not.toContain('<a ');
 	});
 });
 

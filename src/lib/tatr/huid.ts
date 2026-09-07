@@ -88,24 +88,40 @@ function chopHuid(text: string, start: number): number {
 	return i;
 }
 
+/** Where an id sits in the text it was read from: `[start, end)`. */
+export interface HuidSpan {
+	id: string;
+	start: number;
+	end: number;
+}
+
 /**
  * Every HUID appearing in a text, in order and with repeats, the way the
  * reference implementation scans a `TASK.md`: try to read an id at the cursor,
  * and advance by a single character when that fails.
+ *
+ * The positions come out with the ids because a renderer that turns an id into
+ * a link has to know where to cut, and a second scan written for that would be
+ * a second notion of what an id looks like.
  */
-export function scanHuids(text: string): string[] {
-	const found: string[] = [];
+export function scanHuidSpans(text: string): HuidSpan[] {
+	const found: HuidSpan[] = [];
 	let i = 0;
 	while (i < text.length) {
 		const end = chopHuid(text, i);
 		if (end === -1) {
 			i += 1;
 		} else {
-			found.push(text.slice(i, end));
+			found.push({ id: text.slice(i, end), start: i, end });
 			i = end;
 		}
 	}
 	return found;
+}
+
+/** The same scan, for the callers that only care which ids are cited. */
+export function scanHuids(text: string): string[] {
+	return scanHuidSpans(text).map((span) => span.id);
 }
 
 /** Formats an instant as a HUID, the way `tatr new` does. */

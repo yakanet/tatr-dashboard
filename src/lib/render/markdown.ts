@@ -12,15 +12,26 @@
  * as `./screenshot.png`, which means nothing once the markdown leaves the
  * repository, so they are resolved against the task's own folder on the CDN.
  */
-import MarkdownIt from 'markdown-it';
+import MarkdownIt, { type StateCore, type Token } from 'markdown-it';
 import type { RepoRef } from '../repo/ref.ts';
 import { openSource } from '../sources/open.ts';
+import { scanHuidSpans } from '../tatr/huid.ts';
 
 export interface RenderOptions {
 	ref: RepoRef;
 	branch: string;
 	/** The task whose folder relative links resolve against. */
 	taskId: string;
+	/**
+	 * Where a task id written in a body points, or `null` for an id that leads
+	 * nowhere — one this repository does not have, or this task's own.
+	 *
+	 * Handed in rather than built here: the href has to carry the `BASE_PATH`
+	 * the deployed site is served under, which is `$app/paths`' business, and
+	 * this is a plain module under unit test. Every page that renders a body
+	 * already holds the same builder for its own links.
+	 */
+	taskUrl?: (id: string) => string | null;
 }
 
 /** Only the repository's own CDN may load an image, so a task cannot beacon readers. */
@@ -57,6 +68,104 @@ export function resolveAttachment(options: RenderOptions, url: string): string |
 	return openSource(options.ref, { branch: options.branch })?.assetUrl(path) ?? null;
 }
 
+/**
+ * Marks a link this module made, so the rule that rewrites the source's links
+ * leaves it alone: a task page's href has no scheme either, and would otherwise
+ * be resolved as an attachment and end up pointing into the raw files.
+ *
+ * `markup` is where markdown-it's own linkify records the same thing.
+ */
+const TASK_LINK = 'tatr_task_id';
+
+/**
+ * Turns a task id written in a body into a link to that task's page.
+ *
+ * Bodies cite each other by id constantly, and the reason for a reference is in
+ * the sentence holding it — so that is where the link belongs, rather than only
+ * in the References panel beside it.
+ *
+ * Done as markdown-it's own linkify is done: a core rule that splits `text`
+ * tokens once the inline parse is over. Which is what makes an id inside a code
+ * span stay literal without asking — a code span is not a text token — and what
+ * makes an id inside an existing link need stepping over, or the anchor nests.
+ */
+function linkTaskIds(
+	md: InstanceType<typeof MarkdownIt>,
+	taskUrl: (id: string) => string | null
+): void {
+	md.core.ruler.push('tatr_task_ids', (state) => {
+		// A title is rendered inline into a row that is itself a link, and an
+		// anchor inside an anchor is taken apart by the browser — along with the
+		// row link the keyboard follows. Titles keep their ids as text.
+		if (state.inlineMode) return;
+
+		for (const token of state.tokens) {
+			if (token.type !== 'inline' || !token.children) continue;
+			token.children = withTaskLinks(state, token.children, taskUrl);
+		}
+	});
+}
+
+/** The children of one inline token, with the ids among them linked. */
+function withTaskLinks(
+	state: StateCore,
+	children: Token[],
+	taskUrl: (id: string) => string | null
+): Token[] {
+	const out: Token[] = [];
+	/** Depth rather than a flag: a link's own text can hold emphasis and images. */
+	let inLink = 0;
+
+	for (const child of children) {
+		if (child.type === 'link_open') inLink += 1;
+		else if (child.type === 'link_close') inLink -= 1;
+
+		if (inLink > 0 || child.type !== 'text') out.push(child);
+		else out.push(...splitTaskIds(state, child, taskUrl));
+	}
+
+	return out;
+}
+
+/** One text token, cut at each id that resolves, or handed back untouched. */
+function splitTaskIds(
+	state: StateCore,
+	token: Token,
+	taskUrl: (id: string) => string | null
+): Token[] {
+	const out: Token[] = [];
+	let cursor = 0;
+
+	const text = (content: string) => {
+		const piece = new state.Token('text', '', 0);
+		piece.content = content;
+		return piece;
+	};
+
+	for (const span of scanHuidSpans(token.content)) {
+		const url = taskUrl(span.id);
+		// Ids that lead nowhere are most of them: our own tasks cite upstream's,
+		// which this repository does not have. Left as the text they were.
+		if (!url) continue;
+
+		const before = token.content.slice(cursor, span.start);
+		if (before) out.push(text(before));
+
+		const open = new state.Token('link_open', 'a', 1);
+		open.attrs = [['href', url]];
+		open.markup = TASK_LINK;
+
+		out.push(open, text(span.id), new state.Token('link_close', 'a', -1));
+		cursor = span.end;
+	}
+
+	if (out.length === 0) return [token];
+
+	const after = token.content.slice(cursor);
+	if (after) out.push(text(after));
+	return out;
+}
+
 function createRenderer(options: RenderOptions): InstanceType<typeof MarkdownIt> {
 	const md = new MarkdownIt({
 		html: false, // escape any markup in the source
@@ -71,6 +180,10 @@ function createRenderer(options: RenderOptions): InstanceType<typeof MarkdownIt>
 
 	md.renderer.rules.link_open = (tokens, idx, opts, env, self) => {
 		const token = tokens[idx];
+		// Already pointing at a page of this site, and no source can claim this
+		// marker: `markup` is the parser's, not the document's.
+		if (token.markup === TASK_LINK) return defaultLinkOpen(tokens, idx, opts, env, self);
+
 		const href = String(token.attrGet('href') ?? '');
 
 		if (isRelative(href)) {
@@ -98,6 +211,8 @@ function createRenderer(options: RenderOptions): InstanceType<typeof MarkdownIt>
 		}
 		return self.renderToken(tokens, idx, opts);
 	};
+
+	if (options.taskUrl) linkTaskIds(md, options.taskUrl);
 
 	return md;
 }

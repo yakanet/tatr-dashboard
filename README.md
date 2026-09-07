@@ -44,6 +44,10 @@ someone else and land them exactly there.
 
 Nothing to sign in to, nothing to configure, no repository to register first.
 
+Inside a task, the ids its body cites are links too — the ones this repository
+has, which is the set the References panel lists; an id belonging to somebody
+else's tracker stays text.
+
 It answers the keyboard throughout: `j`/`k` walk whatever the view is showing —
 rows, bars, graph nodes — `g g` and `G` reach the ends, `/` puts the caret in
 the query, `1`-`4` switch view, and `?` lists the rest.
