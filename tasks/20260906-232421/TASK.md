@@ -1,7 +1,7 @@
 # Test the views, not only the libraries
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 30
 - TAGS: infra,ui
 
 Every library is covered — two of the suites replay the compiled binary over the
@@ -23,5 +23,8 @@ Add the browser project and cover what a glance cannot assert on its own:
 - every failure state renders its own message, including `no-tasks-folder`,
   which needs a repository nobody wants to fetch in a test.
 
-Worth taking before 20260906-211227 adds a fourth view: each view shipped
-without a test widens the surface only a human can check.
+Deliberately low priority: half of what went wrong in the views was contrast,
+alignment and proportion, which no assertion catches — a reader looking at the
+screen found all of it faster. What tests would pin down is the other half, the
+calculations still buried in components, so the first useful step is pulling
+those out rather than reaching for a browser runner.
