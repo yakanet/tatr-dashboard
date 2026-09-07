@@ -70,9 +70,51 @@ export function memoryStore(): RepoStore {
 	};
 }
 
+/**
+ * Whether a stored row is one this version can read.
+ *
+ * A row written before the wrapper existed carries the value alone and has no
+ * timestamp, so it is skipped rather than shown as read at the epoch.
+ */
+function isStored<T>(value: unknown): value is StoredRepo<T> {
+	if (typeof value !== 'object' || value === null) return false;
+	return typeof (value as StoredRepo<T>).storedAt === 'number';
+}
+
 function request<T>(req: IDBRequest<T>): Promise<T> {
 	return new Promise((resolve, reject) => {
 		req.onsuccess = () => resolve(req.result);
+		req.onerror = () => reject(req.error);
+	});
+}
+
+/**
+ * Every record of a store, walked with a cursor.
+ *
+ * A cursor hands over the key and the value of one record together, which is
+ * the whole reason to prefer it to `getAllKeys()` plus `getAll()`: those return
+ * two arrays a caller has to pair by index, and the pairing only holds while
+ * nothing is written between the two reads. Reading them in one transaction
+ * would make that true; a cursor makes it unnecessary, and a pairing that
+ * cannot come apart beats one that is only argued.
+ *
+ * `continue()` is called from the success handler with nothing awaited in
+ * between, which is what keeps the transaction alive: it commits as soon as it
+ * runs out of work, and an `await` between two steps hands it that chance.
+ */
+export function collect<T>(store: IDBObjectStore): Promise<{ key: IDBValidKey; value: T }[]> {
+	return new Promise((resolve, reject) => {
+		const rows: { key: IDBValidKey; value: T }[] = [];
+		const req = store.openCursor();
+		req.onsuccess = () => {
+			const cursor = req.result;
+			if (!cursor) {
+				resolve(rows);
+				return;
+			}
+			rows.push({ key: cursor.key, value: cursor.value as T });
+			cursor.continue();
+		};
 		req.onerror = () => reject(req.error);
 	});
 }
@@ -110,14 +152,21 @@ export function openStore(): RepoStore {
 		}
 	};
 
+	/**
+	 * Runs one transaction, or gives up quietly.
+	 *
+	 * `run` returns a promise rather than a request, so one request and a cursor
+	 * walk are the same kind of thing here — the walk being the reason: it has to
+	 * stay inside a single transaction, which is a property of where it runs.
+	 */
 	const transact = async <T>(
 		mode: IDBTransactionMode,
-		run: (store: IDBObjectStore) => IDBRequest<T>
+		run: (store: IDBObjectStore) => Promise<T>
 	): Promise<T | undefined> => {
 		const handle = await database();
 		if (!handle) return undefined;
 		try {
-			return await request(run(handle.transaction(STORE, mode).objectStore(STORE)));
+			return await run(handle.transaction(STORE, mode).objectStore(STORE));
 		} catch {
 			return undefined;
 		}
@@ -127,37 +176,40 @@ export function openStore(): RepoStore {
 		async read<T>(key: string) {
 			const handle = await database();
 			if (!handle) return fallback.read<T>(key);
-			const stored = await transact<StoredRepo<T> | undefined>('readonly', (store) =>
-				store.get(key) as IDBRequest<StoredRepo<T> | undefined>
-			);
-			return stored && typeof stored.storedAt === 'number' ? stored : null;
+			const stored = await transact('readonly', (store) => request<unknown>(store.get(key)));
+			return isStored<T>(stored) ? stored : null;
 		},
 
 		async write<T>(key: string, value: T, now = Date.now()) {
 			const handle = await database();
 			if (!handle) return fallback.write(key, value, now);
-			await transact('readwrite', (store) => store.put({ value, storedAt: now }, key));
+			await transact('readwrite', (store) => request(store.put({ value, storedAt: now }, key)));
 		},
 
 		async list<T>() {
 			const handle = await database();
 			if (!handle) return fallback.list<T>();
 
-			const keys = await transact<IDBValidKey[]>('readonly', (store) => store.getAllKeys());
-			const values = await transact<StoredRepo<T>[]>('readonly', (store) => store.getAll());
-			if (!keys || !values || keys.length !== values.length) return [];
+			const rows = await transact('readonly', (store) => collect<unknown>(store));
+			if (!rows) return [];
 
-			return keys
-				.map((key, i) => ({ key: String(key), value: values[i].value, storedAt: values[i].storedAt }))
-				// A row written by an older version may have no timestamp at all.
-				.filter((row) => typeof row.storedAt === 'number')
+			// One pass rather than a filter and a map: the guard is what narrows a row
+			// to the shape the mapping goes on to read.
+			return rows
+				.flatMap(({ key, value }) =>
+					isStored<T>(value)
+						? [{ key: String(key), value: value.value, storedAt: value.storedAt }]
+						: []
+				)
 				.sort(newestFirst);
 		},
 
 		async clear(key?: string) {
 			const handle = await database();
 			if (!handle) return fallback.clear(key);
-			await transact('readwrite', (store) => (key === undefined ? store.clear() : store.delete(key)));
+			await transact('readwrite', (store) =>
+				request(key === undefined ? store.clear() : store.delete(key))
+			);
 		}
 	};
 }

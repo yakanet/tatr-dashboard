@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { memoryStore, openStore } from './store.ts';
+import { collect, memoryStore, openStore } from './store.ts';
 
 describe('memoryStore', () => {
 	it('round-trips a value with its timestamp', async () => {
@@ -38,6 +38,16 @@ describe('memoryStore', () => {
 		expect((await store.read<number>('b'))?.value).toBe(2);
 	});
 
+	it('lists what it holds, newest first, for the homepage', async () => {
+		const store = memoryStore();
+		await store.write('older', 1, 10);
+		await store.write('newer', 2, 20);
+		expect(await store.list<number>()).toEqual([
+			{ key: 'newer', value: 2, storedAt: 20 },
+			{ key: 'older', value: 1, storedAt: 10 }
+		]);
+	});
+
 	it('clears everything', async () => {
 		const store = memoryStore();
 		await store.write('a', 1);
@@ -58,5 +68,72 @@ describe('openStore', () => {
 		expect((await store.read<{ ok: boolean }>('k'))?.value).toEqual({ ok: true });
 		await store.clear();
 		expect(await store.read('k')).toBeNull();
+	});
+});
+
+/**
+ * A cursor over fixed records, standing in for the one IndexedDB opens.
+ *
+ * There is no IndexedDB under node, and the walk is ours rather than the
+ * platform's: what is worth pinning down is that it accumulates in order,
+ * stops on the null cursor, and asks for the next record from inside the
+ * handler — a step deferred to a microtask would let the transaction commit
+ * underneath it.
+ */
+function fakeStore(records: { key: IDBValidKey; value: unknown }[]): IDBObjectStore {
+	const req: Partial<IDBRequest> & { result: unknown } = { result: null, error: null };
+	let at = 0;
+
+	const step = () => {
+		req.result =
+			at < records.length
+				? {
+						key: records[at].key,
+						value: records[at].value,
+						continue: () => {
+							at += 1;
+							step();
+						}
+					}
+				: null;
+		req.onsuccess?.call(req as IDBRequest, new Event('success'));
+	};
+
+	return {
+		openCursor: () => {
+			// The handler is attached after this returns, as it is with the real API.
+			queueMicrotask(step);
+			return req as IDBRequest<IDBCursorWithValue | null>;
+		}
+	} as unknown as IDBObjectStore;
+}
+
+describe('collect', () => {
+	it('pairs every key with its own value, the two never being apart', async () => {
+		const rows = await collect(
+			fakeStore([
+				{ key: 'a', value: { storedAt: 2 } },
+				{ key: 'b', value: { storedAt: 1 } }
+			])
+		);
+		expect(rows).toEqual([
+			{ key: 'a', value: { storedAt: 2 } },
+			{ key: 'b', value: { storedAt: 1 } }
+		]);
+	});
+
+	it('resolves empty on an empty store rather than hanging', async () => {
+		expect(await collect(fakeStore([]))).toEqual([]);
+	});
+
+	it('rejects rather than resolving half a store', async () => {
+		const store = {
+			openCursor: () => {
+				const req = { result: null, error: new Error('gone') } as unknown as IDBRequest;
+				queueMicrotask(() => req.onerror?.call(req, new Event('error')));
+				return req;
+			}
+		} as unknown as IDBObjectStore;
+		await expect(collect(store)).rejects.toThrow('gone');
 	});
 });
