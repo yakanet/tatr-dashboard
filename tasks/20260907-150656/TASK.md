@@ -1,6 +1,6 @@
 # Remember the folder between visits
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 50
 - TAGS: data,ui
 
@@ -43,3 +43,26 @@ It would also put something beside the folder in storage, which is what the
 comparison from 20260907-040703 needs to work for a local source: it is the
 cache that carries the previous reading, and a folder has no cache. A snapshot
 kept next to the handle would close that gap, and is not this task.
+
+---
+
+Abandoned rather than built, and the reason is in the mechanism rather than in
+the effort: what gets remembered is a *handle*, and only two of the three doors
+hand one over. The picker gives one on Chromium alone; a drop gives one on
+Chromium and a legacy `FileSystemEntry` everywhere else, which has no clone
+steps defined and so cannot be stored at all; the directory input gives a flat
+list of files, where there is nothing to keep.
+
+So the offer would exist on Chrome and Edge, and be absent on Firefox, on
+Safari, and on Brave, which ships the API turned off. Not a fallback — an
+absence. And even where it worked it would be one click rather than none, since
+the permission never survives a reload; only the handle does.
+
+A door that opens for some readers and not others is worth less here than the
+one sentence it would save, so the feature is dropped rather than shipped
+half-wide. Nothing was built for it, so nothing is removed: the handle is still
+kept in memory for Refresh, which is a different promise and holds for the
+length of a visit.
+
+The measurements are left above so nobody has to take them again to reach the
+same answer.

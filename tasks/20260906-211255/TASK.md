@@ -1,6 +1,6 @@
 # Support forges other than GitHub
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 50
 - TAGS: data
 
@@ -263,3 +263,72 @@ better than it sounds: `github` is the default and stays absent, exactly as
 Not attempted, deliberately: `RepoRef`'s owner-and-name shape, which is still
 the real work; the split of `mayBeStale` from `complete`; and the mark registry,
 which now has an id to key on.
+
+---
+
+GitLab measured rather than assumed, since the whole architecture rests on
+"listing is metered, contents are not" and a forge that breaks the split changes
+the design. Headers read with an `Origin` of our own, against `gitlab.com`:
+
+- **The API is CORS-open**: `/api/v4/.../repository/tree` answers
+  `access-control-allow-origin: *` and exposes its pagination headers to the
+  page (`X-Total`, `X-Next-Page`, `Link`). Its budget is `ratelimit-limit: 500`,
+  per minute rather than per hour.
+- **The web raw endpoint is not.** `gitlab.com/owner/name/-/raw/main/file`
+  answers 200 to `curl` and carries *no* `access-control-allow-origin`, so a
+  `fetch` from the page is blocked. It stays usable for an `<img>` and for a
+  link, neither of which needs CORS — so `assetUrl` and `fileUrl` are fine and
+  `read` is not.
+- **So contents cost budget on GitLab.** They come from
+  `/repository/files/:path/raw?ref=`, which is CORS-open and metered like the
+  rest. 500 a minute against ~40 tasks is comfortable, but the sentence the
+  README prints — contents are free, only listing is counted — becomes a fact
+  about GitHub rather than about the viewer. `Source` needs to say it.
+- **Listing can be cheaper than on GitHub.** The tree API takes `path=`, so it
+  lists `tasks/` alone: 43 entries in a single page where the whole repository
+  is 7,180. GitHub's recursive tree has no such filter and returns everything.
+- **`ref=HEAD` is accepted**, and so is no `ref` at all. The measured shortcut
+  survives, so "what reference when none is given" is not a cost here.
+
+Which settles the two things this task said would decide how much it costs: the
+raw/API split has to move into the source, and GitLab's pagination is real but
+bounded by `path=`.
+
+---
+
+Closed on a decision rather than on a second forge: none is wanted for now, so
+the GitLab source is set aside. What this task was really asked to produce got
+produced — the interface, and the knowledge of what a second forge would cost.
+
+What stands: `Source` and `SourceKind`, both existing sources read through them,
+one path in the loader where there were two, and GitLab's endpoints measured
+instead of guessed. Starting a forge from here begins with a working
+abstraction and a page of facts, not from zero.
+
+What is deliberately not done, and why each piece buys nothing until a second
+forge exists:
+
+- **`RepoRef` as a path.** Its only justification is GitLab nesting groups
+  arbitrarily deep. On GitHub a repository is always two segments, so the change
+  would be generality serving nobody. Worth recording that it is smaller than
+  this task feared: ten call sites in four files, and all ten already spell
+  `${ref.owner}/${ref.name}`, which is to say they want the path. The real
+  content is in the parser, and in `repoKey` changing shape — the cache never
+  expires, so old entries would sit orphaned forever unless a version prefix
+  retires them.
+- **The source id in the URL.** With one forge there is nothing to distinguish;
+  `github` would be an implicit segment that never appears. The wart it would
+  fix — `/local` being an id wearing a host's clothes — is not worth a change to
+  the URL scheme on its own.
+- **The mark registry**, which needs a second mark.
+- **`complete` beside `mayBeStale`.** Already decided the other way and working:
+  a truncated tree throws, so the GitHub lister fails and the page falls through
+  to a fallback rather than showing part of a repository. Splitting the field
+  would let the reader see the tasks that *were* found under a warning, which is
+  arguably better for a monorepo — and nobody has one. GitHub's cap is 100,000
+  entries; this repository holds 38 files.
+
+One wart left standing on purpose: that truncation is reported as `malformed`,
+which it is not. A one-word mislabel in a message no reader has seen, in the
+vocabulary that a second forge would rewrite anyway.
+
