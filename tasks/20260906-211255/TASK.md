@@ -208,6 +208,27 @@ place.
 admitting rather than dressing up: the alternative was a module-level registry
 for the tests to mutate.
 
+**And the id is not in the URL, which is the question the POC leaves open.** Our
+own URLs carry a *host* — `/tsoding/tatr`, `/gitlab.com/group/project` — and the
+kind is inferred from it, today by "any host with a dot is GitHub". `repoKey`
+carries the host too, and no id.
+
+That holds while one forge exists and breaks in two places when a second one
+does. A host cannot say which software answers it: `git.mycompany.com` may be a
+GitLab or a Gitea, and no table of known hosts will ever know. Either the page
+probes, or the reader names it — and the place a reader names it is the URL,
+which would then carry the id as a segment of its own:
+`/gitea/git.mycompany.com/owner/name`. The second place is the cache: two
+readings of one host by two kinds would share an entry, since the key does not
+distinguish them.
+
+What settles the shape is that the URL *already* carries an id in one case.
+`/local` is not a host, and `LOCAL_HOST` says as much in its own doc comment —
+an id wearing a host's clothes. So the scheme mixes the two notions today, and
+the choice is to name the id everywhere or nowhere. Naming it everywhere reads
+better than it sounds: `github` is the default and stays absent, exactly as
+`github.com` is absent now.
+
 Not attempted, deliberately: `RepoRef`'s owner-and-name shape, which is still
 the real work; the split of `mayBeStale` from `complete`; and the mark registry,
 which now has an id to key on.
