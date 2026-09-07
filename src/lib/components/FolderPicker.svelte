@@ -18,9 +18,9 @@
 		fromDirectoryEntry,
 		fromDirectoryHandle,
 		fromFileList,
-		openFolder,
 		type LocalFolder
-	} from '#lib/sources/local.ts';
+	} from '#lib/sources/local/folder.ts';
+	import { openFolder } from '#lib/sources/local/session.ts';
 
 	let { label = 'Open a folder…' }: { label?: string } = $props();
 

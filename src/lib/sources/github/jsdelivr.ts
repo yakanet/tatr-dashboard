@@ -5,7 +5,7 @@
  * when measured it reported 63 of 64 tasks, missing the most recent one. Its
  * listings are therefore flagged as possibly stale so the UI can say so.
  */
-import {type Provider, ProviderError} from './provider.ts';
+import {type Provider, ProviderError} from '../provider.ts';
 
 const API = 'https://data.jsdelivr.com/v1/packages/gh';
 const NAME = 'jsdelivr';

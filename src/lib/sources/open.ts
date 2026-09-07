@@ -6,8 +6,8 @@
  * implementations, and only this module knows the whole list.
  */
 import type { RepoRef } from '../repo/ref.ts';
-import { githubKind } from './github.ts';
-import { localKind } from './local.ts';
+import { githubKind } from './github/forge.ts';
+import { localKind } from './local/session.ts';
 import type { OpenOptions, Source, SourceKind } from './source.ts';
 
 /**

@@ -38,3 +38,55 @@ and it also pins that no lister is tried — proved by removing the guard, which
 fails it.
 
 577 tests green, `svelte-check` at zero.
+
+---
+
+The other half of the same question, asked straight after: `PROVIDERS` should
+not sit inside `github.ts` either, and the suggestion was an `index.ts`.
+
+Not an `index.ts`, for a reason already in the tree: the one this repository has,
+`src/lib/tatr/index.ts`, is imported by nobody. A barrel buys nothing here
+because `#lib/*` demands file extensions, so there is no directory resolution to
+shorten — an import would read `.../github/index.ts` anyway, and would hide
+which file the symbol came from.
+
+The layout answers it instead. `sources/github/` now holds `api.ts` (the trees
+API as one lister), `ungh.ts` and `jsdelivr.ts` (mirrors of it), and `forge.ts`
+(the host guard, the ordered chain, the URL shapes, the source kind). The claim
+this task made in prose — those three listers are GitHub, not three sources —
+is now in the filesystem rather than in a comment.
+
+The chain also has to live *above* its members, which flat files could not
+express: the kind needs the chain and the chain needs the listers, so any split
+that left them side by side made a cycle.
+
+One thing deliberately not shared: the forge's id and its primary lister's name
+are both `github` and are now declared twice, once in each file. They coincide
+today and are not the same fact — renaming the API lister would not rename the
+forge — and a shared constant would have claimed they must move together.
+
+Left standing, mentioned rather than done: `provider.ts` is the vocabulary a
+chain shares, but `Listing` and `ProviderError` are used by the local source
+too, which is not a provider. And `src/lib/tatr/index.ts` is still dead.
+
+---
+
+One source, one folder — applied to the local source too, since half a pattern
+is worse than none. `local/folder.ts` is what a folder is and the three ways one
+gets in; `local/session.ts` is the source, holding for a folder what `forge.ts`
+holds for GitHub.
+
+The two folders are deliberately not symmetrical inside, and the reason is
+worth writing down before somebody evens them up. A forge's three listers are
+independent services — three hosts, three response shapes, three error
+translations — so they are three files. The folder's three doors are one walk in
+three dialects: they share the type they produce and the strategy of descending
+`tasks/` alone, and only the flat-list door needs the path filter at all.
+Splitting them would have bought a fourth file to hold what they share.
+
+What the move made visible: the session is the local source. Not a helper it
+uses — the module state *is* what "a folder is open" means, so it belongs in the
+file that builds the kind rather than beside the walks. Which is also why the
+folder file exports no state at all: it turns three browser APIs into a name and
+a map, and nothing more.
+

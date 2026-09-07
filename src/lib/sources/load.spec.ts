@@ -4,8 +4,9 @@ import { parseRepoPath } from '../repo/ref.ts';
 import { memoryStore } from './store.ts';
 import { NoTasksFolderError, loadRepository } from './load.ts';
 import { NoSourceError } from './source.ts';
-import { listRepository } from './github.ts';
-import { closeFolder, fromFileList, openFolder } from './local.ts';
+import { listRepository } from './github/forge.ts';
+import { fromFileList } from './local/folder.ts';
+import { closeFolder, openFolder } from './local/session.ts';
 import { localRef } from '../repo/ref.ts';
 import { ProviderError, type Listing, type Provider } from './provider.ts';
 

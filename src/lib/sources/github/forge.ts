@@ -1,59 +1,28 @@
 /**
- * GitHub as the primary provider.
+ * GitHub as a source: the listers it falls through, its URL shapes, and the
+ * reference it reads by default.
  *
- * One call to the git trees API returns the entire repository tree, so listing a
- * repository costs exactly one request out of the 60 per hour an unauthenticated
- * IP gets. File contents are read from raw.githubusercontent.com, which is a CDN
- * and sends no rate-limit headers at all — 64 files fetched in parallel came back
- * in a fifth of a second when measured.
+ * The three listers are all GitHub — its own API, ungh proxying it, jsDelivr
+ * serving a cached copy of it — so they are not three sources but one forge's
+ * fallback order, which is why they sit in this folder and why the list belongs
+ * here rather than inside any one of them. A second forge would start with one
+ * lister and no fallback.
  *
- * Both endpoints accept `HEAD` as the reference, including on repositories whose
- * default branch is not `main`, so resolving the default branch is unnecessary.
- * That halves what listing costs: one request per repository, never two.
- *
- * Measured: a conditional request answering 304 still consumes quota when
- * unauthenticated, so revalidation is not free and caching is done on a TTL.
+ * File contents are read from raw.githubusercontent.com, which is a CDN and
+ * sends no rate-limit headers at all: 64 files fetched in parallel came back in
+ * a fifth of a second when measured. That split — listing is metered, contents
+ * are not — is a fact about this forge, not about sources.
  */
-import { repoKey, type RepoRef } from '../repo/ref.ts';
-import { ProviderError, type Listing, type Provider } from './provider.ts';
+import { repoKey, type RepoRef } from '../../repo/ref.ts';
+import { ProviderError, type Listing, type Provider } from '../provider.ts';
+import { github } from './api.ts';
 import { jsdelivr } from './jsdelivr.ts';
 import { ungh } from './ungh.ts';
-import type { OpenOptions, Source, SourceKind } from './source.ts';
+import type { OpenOptions, Source, SourceKind } from '../source.ts';
 
-const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
+/** The forge's own id, which its primary lister happens to answer to as well. */
 const NAME = 'github';
-
-interface TreeResponse {
-	tree?: { path: string; type: string; size?: number }[];
-	truncated?: boolean;
-}
-
-async function json(url: string, signal?: AbortSignal): Promise<Response> {
-	let response: Response;
-	try {
-		response = await fetch(url, {
-			signal,
-			headers: { Accept: 'application/vnd.github+json' }
-		});
-	} catch {
-		throw new ProviderError('network', NAME, `Could not reach ${url}`);
-	}
-
-	if (response.status === 403 || response.status === 429) {
-		const remaining = response.headers.get('x-ratelimit-remaining');
-		if (remaining === '0' || response.status === 429) {
-			throw new ProviderError('rate-limited', NAME, 'GitHub API rate limit reached');
-		}
-	}
-	if (response.status === 404) {
-		throw new ProviderError('not-found', NAME, 'Repository or branch not found');
-	}
-	if (!response.ok) {
-		throw new ProviderError('network', NAME, `GitHub answered ${response.status}`);
-	}
-	return response;
-}
 
 /**
  * Refuses a reference this forge does not serve.
@@ -71,39 +40,6 @@ function assertHost(ref: RepoRef): void {
 		);
 	}
 }
-
-export const github: Provider = {
-	name: NAME,
-
-	async list(ref, signal) {
-		// `HEAD` avoids a second request to learn the default branch's name.
-		const branch = ref.branch ?? 'HEAD';
-		const response = await json(
-			`${API}/repos/${ref.owner}/${ref.name}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
-			signal
-		);
-		const body = (await response.json()) as TreeResponse;
-		if (!Array.isArray(body.tree)) {
-			throw new ProviderError('malformed', NAME, 'No tree in the response');
-		}
-		if (body.truncated) {
-			throw new ProviderError(
-				'malformed',
-				NAME,
-				'Repository tree is truncated; it is too large to list in one call'
-			);
-		}
-
-		return {
-			entries: body.tree
-				.filter((entry) => entry.type === 'blob')
-				.map((entry) => (entry.size === undefined ? { path: entry.path } : { path: entry.path, size: entry.size })),
-			source: NAME,
-			mayBeStale: false,
-			branch
-		};
-	}
-};
 
 /**
  * Encodes a path one segment at a time, so the slashes between them survive.

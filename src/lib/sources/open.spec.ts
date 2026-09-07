@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { KINDS, openSource } from './open.ts';
 import { localRef, parseRepoPath, type RepoRef } from '../repo/ref.ts';
-import { closeFolder, fromFileList, openFolder } from './local.ts';
+import { fromFileList } from './local/folder.ts';
+import { closeFolder, openFolder } from './local/session.ts';
 
 const refs: RepoRef[] = [
 	parseRepoPath('tsoding/tatr')!,

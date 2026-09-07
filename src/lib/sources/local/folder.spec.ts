@@ -7,7 +7,7 @@ import {
 	listFolder,
 	looksLikeTasksFolder,
 	readBranch
-} from './local.ts';
+} from './folder.ts';
 
 /** A file as the directory input reports it, path and all. */
 function entry(relativePath: string, contents = 'x'): File {

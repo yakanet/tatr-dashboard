@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { githubKind, listRepository } from './github.ts';
-import { ProviderError } from './provider.ts';
-import { parseRepoInput } from '../repo/ref.ts';
+import { githubKind, listRepository } from './forge.ts';
+import { ProviderError } from '../provider.ts';
+import { parseRepoInput } from '../../repo/ref.ts';
 
 const ref = parseRepoInput('tsoding/tatr')!;
 const path = 'tasks/20260304-115038/TASK.md';

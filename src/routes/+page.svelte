@@ -7,7 +7,7 @@
 	import Shortcuts from '#lib/components/Shortcuts.svelte';
 	import { formatRepoPath, parseRepoInput } from '#lib/repo/ref.ts';
 	import { toSuggestions, type CachedShape, type Suggestion } from '#lib/repo/recent.ts';
-	import { folderAccess } from '#lib/sources/local.ts';
+	import { folderAccess } from '#lib/sources/local/folder.ts';
 	import { openStore } from '#lib/sources/store.ts';
 	import { describeAge } from '#lib/state/repository.svelte.ts';
 
