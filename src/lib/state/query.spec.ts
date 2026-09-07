@@ -40,7 +40,7 @@ describe('QueryState', () => {
 
 	it('reports a syntax error rather than filtering', () => {
 		const query = withText('pr');
-		expect(query.error?.message).toBe('Unknown token `pr`');
+		expect(query.error?.message).toBe('Unexpected start of a primary expression `pr`.');
 		expect(query.apply(tasks)).toHaveLength(2);
 	});
 

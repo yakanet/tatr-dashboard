@@ -145,15 +145,17 @@ describe('errors', () => {
 	};
 
 	it('rejects an empty tag', () => {
-		expect(fails(':')?.message).toBe('Empty tag');
+		// Lowercase where every neighbouring message is capitalised. Reproduced
+		// as upstream writes it, like the author's typos elsewhere.
+		expect(fails(':')?.message).toBe('empty tag');
 	});
 
 	it('rejects an empty query', () => {
-		expect(fails('')?.message).toBe('Expected an expression');
+		expect(fails('')?.message).toBe('Primary expression is expected here.');
 	});
 
 	it('rejects an unclosed group', () => {
-		expect(fails('[:a')?.message).toBe('Expected `]`');
+		expect(fails('[:a')?.message).toBe('Expected `]`.');
 	});
 
 	it('rejects a stray closing bracket', () => {
@@ -161,11 +163,11 @@ describe('errors', () => {
 	});
 
 	it('rejects an unknown word', () => {
-		expect(fails('bug')?.message).toBe('Unknown token `bug`');
+		expect(fails('bug')?.message).toBe('Unexpected start of a primary expression `bug`.');
 	});
 
 	it('rejects a dangling operator', () => {
-		expect(fails(':a and')?.message).toBe('Expected an expression');
+		expect(fails(':a and')?.message).toBe('Primary expression is expected here.');
 	});
 
 	it('points at the offending token', () => {
@@ -206,17 +208,37 @@ describe('errors', () => {
 	});
 });
 
+/** The error a source throws, for asserting on what gets rendered. */
+const thrown = (source: string): TqlError => {
+	try {
+		parse(source);
+		expect.unreachable('should have thrown');
+	} catch (error) {
+		return error as TqlError;
+	}
+};
+
 describe('formatDiagnostic', () => {
-	it('underlines the offending token', () => {
-		const source = ':a and nope';
-		try {
-			parse(source);
-			expect.unreachable('should have thrown');
-		} catch (error) {
-			expect(formatDiagnostic(source, error as TqlError)).toBe(
-				':a and nope\n       ^\nUnknown token `nope`'
-			);
-		}
+	it('points a single caret at the offending token, above the primary list', () => {
+		expect(formatDiagnostic(':a and nope', thrown(':a and nope'))).toBe(
+			[
+				'What are primary expressions:',
+				'',
+				'    :<tag>         - checks if task has a tag',
+				'    ~<word>        - checks if the title holds a word',
+				'    ~"<words>"     - checks if the title holds all of them',
+				'    [ <expr> ]     - same as previous but for Bash users',
+				'    not <primary>  - negation of a primary expression',
+				'    any            - expression that always returns true',
+				'    tagged         - checks if a task is tagged',
+				'    priority       - priority of a task as an integer',
+				'    <number>       - signed integer',
+				'',
+				':a and nope',
+				'       ^',
+				'Unexpected start of a primary expression `nope`.'
+			].join('\n')
+		);
 	});
 });
 
@@ -292,7 +314,7 @@ describe('the ~ term', () => {
 	it('leaves a quote alone where the language has no use for one', () => {
 		// Nothing in the C grammar spells a string, so this stays an unknown token
 		// rather than quietly becoming a search.
-		expect(() => parse('"windows"')).toThrow('Unknown token');
+		expect(() => parse('"windows"')).toThrow('Unexpected start of a primary expression');
 	});
 });
 
@@ -306,14 +328,7 @@ describe('two primaries with nothing between them', () => {
 	});
 
 	it('carries the operator list into the rendered diagnostic', () => {
-		let error: unknown;
-		try {
-			parse(':bug not :ui');
-		} catch (thrown) {
-			error = thrown;
-		}
-		const rendered = formatDiagnostic(':bug not :ui', error as TqlError);
-		expect(rendered).toBe(
+		expect(formatDiagnostic(':bug not :ui', thrown(':bug not :ui'))).toBe(
 			[
 				'Supported infix operators:',
 				'',
@@ -327,16 +342,13 @@ describe('two primaries with nothing between them', () => {
 		);
 	});
 
-	it('leaves every other diagnostic without help', () => {
-		let error: unknown;
-		try {
-			parse('priority lt');
-		} catch (thrown) {
-			error = thrown;
-		}
-		expect((error as TqlError).help).toBeUndefined();
-		expect(formatDiagnostic('priority lt', error as TqlError)).toBe(
-			'priority lt\n           ^\nExpected an expression'
-		);
+	it('helps the same way when the primary is missing rather than wrong', () => {
+		expect(thrown('priority and').help).toBe(thrown('nope').help);
+	});
+
+	it('leaves a diagnostic the CLI does not help with alone', () => {
+		// An unclosed bracket gets no list upstream, only the caret.
+		expect(thrown('[:a').help).toBeUndefined();
+		expect(formatDiagnostic('[:a', thrown('[:a'))).toBe('[:a\n   ^\nExpected `]`.');
 	});
 });

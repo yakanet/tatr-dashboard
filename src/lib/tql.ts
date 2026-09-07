@@ -99,6 +99,25 @@ const INFIX_HELP = `Supported infix operators:
     and  or                  - logical operators
     lt  le  gt  ge  eq  ne   - comparison operators`;
 
+/**
+ * What `src/query.c` prints above the two diagnostics about a missing or
+ * unrecognised primary, with `~` added to the list.
+ *
+ * Adding to it is the honest consequence of adding the primary: an aid that
+ * enumerates the vocabulary and omits a word of it would be worse than none.
+ */
+const PRIMARY_HELP = `What are primary expressions:
+
+    :<tag>         - checks if task has a tag
+    ~<word>        - checks if the title holds a word
+    ~"<words>"     - checks if the title holds all of them
+    [ <expr> ]     - same as previous but for Bash users
+    not <primary>  - negation of a primary expression
+    any            - expression that always returns true
+    tagged         - checks if a task is tagged
+    priority       - priority of a task as an integer
+    <number>       - signed integer`;
+
 /** A parse that succeeded but used deprecated syntax. */
 export interface TqlWarning {
 	message: string;
@@ -179,7 +198,7 @@ export function parseWithWarnings(source: string): ParseResult {
 
 	function primary(): Node {
 		const token = next();
-		if (!token) throw new TqlError('Expected an expression', eof());
+		if (!token) throw new TqlError('Primary expression is expected here.', eof(), PRIMARY_HELP);
 
 		// `.tag` predates `:tag` and is still accepted by the reference parser.
 		if (token.text.startsWith(':') || token.text.startsWith('.')) {
@@ -189,7 +208,7 @@ export function parseWithWarnings(source: string): ParseResult {
 					span: token.span
 				});
 			}
-			if (token.text.length === 1) throw new TqlError('Empty tag', token.span);
+			if (token.text.length === 1) throw new TqlError('empty tag', token.span);
 			return { kind: 'tag', name: token.text.slice(1), span: token.span };
 		}
 
@@ -213,12 +232,10 @@ export function parseWithWarnings(source: string): ParseResult {
 			const inner = expression();
 			const closing = next();
 			if (!closing || closing.text !== ']') {
-				throw new TqlError('Expected `]`', closing ? closing.span : eof());
+				throw new TqlError('Expected `]`.', closing ? closing.span : eof());
 			}
 			return inner;
 		}
-
-		if (token.text === ']') throw new TqlError('Unexpected `]`', token.span);
 
 		// `not` binds to a primary, so `not :a and :b` means `[not :a] and :b`.
 		if (token.text === 'not') {
@@ -234,7 +251,11 @@ export function parseWithWarnings(source: string): ParseResult {
 			return { kind: 'integer', value: Number.parseInt(token.text, 10), span: token.span };
 		}
 
-		throw new TqlError(`Unknown token \`${token.text}\``, token.span);
+		throw new TqlError(
+			`Unexpected start of a primary expression \`${token.text}\`.`,
+			token.span,
+			PRIMARY_HELP
+		);
 	}
 
 	function comparison(): Node {
@@ -365,6 +386,9 @@ export function compile(source: string): (task: TqlTask) => boolean {
  * One caret, never a run of them under the whole token: `report_compile_query_
  * diagnostic` prints `"%*s", cursor, "^"`, so the width only positions it. An
  * underline would read better and is not what the reader sees in their terminal.
+ *
+ * The CLI's `ERROR: ` prefix is left off, being what separates a message from
+ * ordinary output on a terminal. Here the diagnostic has a panel of its own.
  */
 export function formatDiagnostic(source: string, error: TqlError): string {
 	const caret = `${' '.repeat(error.span.start)}^`;
