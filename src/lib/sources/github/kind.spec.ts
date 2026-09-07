@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { githubKind, listRepository } from './forge.ts';
+import { githubKind, listRepository } from './kind.ts';
 import { ProviderError } from '../provider.ts';
 import { parseRepoInput } from '../../repo/ref.ts';
 

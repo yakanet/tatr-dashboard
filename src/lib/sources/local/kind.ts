@@ -1,5 +1,7 @@
 /**
- * The folder the reader has open, as a source.
+ * The folder the reader has open, as a source — this folder's entry, as
+ * `kind.ts` is in every source folder: the file that builds the
+ * {@link SourceKind} the registry holds.
  *
  * A local source is a session where a forge is an address: the browser grants
  * access on a gesture and takes it back on a reload, so nothing here could be
@@ -70,7 +72,9 @@ function assetUrl(path: string): string | null {
 }
 
 /**
- * The folder the reader has open, as a source.
+ * The folder the reader has open, as a source — this folder's entry, as
+ * `kind.ts` is in every source folder: the file that builds the
+ * {@link SourceKind} the registry holds.
  *
  * What it does not have is as telling as what it does: no cache key, because
  * reading the folder is free and a stored copy of files someone is editing

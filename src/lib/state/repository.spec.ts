@@ -3,7 +3,7 @@ import { describeAge, RepositoryState } from './repository.svelte.ts';
 import { snapshot } from '../tatr/changes.ts';
 import { localRef } from '../repo/ref.ts';
 import { fromFileList } from '../sources/local/folder.ts';
-import { closeFolder, openFolder } from '../sources/local/session.ts';
+import { closeFolder, openFolder } from '../sources/local/kind.ts';
 import { readTask, type Task } from '../tatr/task.ts';
 
 /**

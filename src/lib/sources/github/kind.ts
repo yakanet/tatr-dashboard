@@ -1,6 +1,10 @@
 /**
- * GitHub as a source: the listers it falls through, its URL shapes, and the
- * reference it reads by default.
+ * GitHub as a source — this folder's entry, as `kind.ts` is in every source
+ * folder: the file that builds the {@link SourceKind} the registry holds.
+ *
+ * A forge is what GitHub is, and the rest of this file is what that means: the
+ * listers it falls through, its URL shapes, and the reference it reads by
+ * default.
  *
  * Both listers are GitHub — its own API, and ungh proxying it — so they are not
  * two sources but one forge's fallback order, which is why they sit in this

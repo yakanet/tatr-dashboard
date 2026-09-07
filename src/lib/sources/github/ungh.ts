@@ -19,8 +19,6 @@ interface UnghResponse {
 }
 
 export const ungh: Provider = {
-	name: NAME,
-
 	async list(ref, signal) {
 		const branch = ref.branch ?? 'HEAD';
 		const url = `${API}/repos/${ref.owner}/${ref.name}/files/${encodeURIComponent(branch)}`;

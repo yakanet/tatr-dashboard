@@ -20,7 +20,7 @@
 		fromFileList,
 		type LocalFolder
 	} from '#lib/sources/local/folder.ts';
-	import { openFolder } from '#lib/sources/local/session.ts';
+	import { openFolder } from '#lib/sources/local/kind.ts';
 
 	let { label = 'Open a folder…' }: { label?: string } = $props();
 

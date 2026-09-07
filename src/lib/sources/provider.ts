@@ -22,13 +22,6 @@ export interface Listing {
 }
 
 export interface Provider {
-	/**
-	 * Which lister this is. Read by nothing since a listing stopped carrying it:
-	 * a failure names its own lister through {@link ProviderError}, and success
-	 * no longer has anybody to tell. Kept as the interface saying what a lister
-	 * is, at the price of one line.
-	 */
-	readonly name: string;
 	/** Lists every file in the repository. Throws {@link ProviderError} on failure. */
 	list(ref: RepoRef, signal?: AbortSignal): Promise<Listing>;
 }

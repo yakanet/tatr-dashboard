@@ -49,8 +49,6 @@ async function json(url: string, signal?: AbortSignal): Promise<Response> {
 }
 
 export const github: Provider = {
-	name: NAME,
-
 	async list(ref, signal) {
 		// `HEAD` avoids a second request to learn the default branch's name.
 		const branch = ref.branch ?? 'HEAD';

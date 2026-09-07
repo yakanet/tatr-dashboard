@@ -90,3 +90,27 @@ file that builds the kind rather than beside the walks. Which is also why the
 folder file exports no state at all: it turns three browser APIs into a name and
 a map, and nothing more.
 
+---
+
+The entry point of a source folder was not findable by name: `github/forge.ts`
+on one side, `local/session.ts` on the other, both true to their domain and
+neither recognisable as *the* file the registry imports.
+
+Both are now `kind.ts`, which names the export that makes a folder a source —
+the {@link SourceKind} `open.ts` holds. Not `source.ts`, which would have been
+the third file of that name beside the contract in `sources/source.ts`; not
+`index.ts`, for the reasons recorded above. The domain word each file had earned
+did not disappear, it moved one line down into the module doc, where "a forge is
+what GitHub is" and "a local source is a session" are sentences rather than
+filenames.
+
+So a reader arriving at `sources/` finds the contract in `source.ts`, the
+registry in `open.ts`, and one `kind.ts` per source folder.
+
+And `Provider.name` is gone, having survived one commit as the thing that would
+cost 28 call sites to remove. It cost a regex over one spec, which is what the
+answer to "if it is not useful, it goes" is worth. What remains of a lister's
+identity is where it is actually read: the `ProviderError` it throws names it.
+`Provider` is now a single method — a function type wearing an interface, which
+is what lets a test spy on `.list`.
+
