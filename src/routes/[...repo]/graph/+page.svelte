@@ -211,7 +211,7 @@
 							<!-- The node is the link, so the drawing is navigable on its own
 							     and not just a picture of the legend below it. -->
 							{#each cluster.nodes as node, i (node.task.id)}
-								<a href={taskHref(node.task.id)}>
+								<a href={taskHref(node.task.id)} data-key-row>
 									<title>{describe(node)}</title>
 									<circle
 										cx={draw.points[i].x}

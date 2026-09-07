@@ -105,7 +105,7 @@
 						{#each priorities as bucket (bucket.priority)}
 							{@const term = `priority eq ${bucket.priority}`}
 							<li>
-								<button class="row" onclick={() => pick(term)}>
+								<button class="row" data-key-row onclick={() => pick(term)}>
 									<span class="label mono">{bucket.priority}</span>
 									<span class="track">
 										<span class="fill" style:width="{(bucket.count / maxPriority) * 100}%"></span>
@@ -132,6 +132,7 @@
 							<li>
 								<button
 									class="row"
+									data-key-row
 									onclick={() => pick(term)}
 									title={repo.tags.descriptions.get(bucket.tag) ?? ''}
 								>
@@ -197,7 +198,8 @@
 					{#each top as task (task.id)}
 						<li>
 							<span class="prio mono">{task.priority}</span>
-							<a class="title" href={taskHref(task.id)}>{@html inline(task.title, task.id)}</a>
+							<a class="title" href={taskHref(task.id)} data-key-row
+								>{@html inline(task.title, task.id)}</a>
 							{#each task.tags as tag (tag)}
 								<button class="tag" onclick={() => pick(`:${tag}`)}>{tag}</button>
 							{/each}

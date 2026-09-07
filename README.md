@@ -43,6 +43,10 @@ someone else and land them exactly there.
 
 Nothing to sign in to, nothing to configure, no repository to register first.
 
+It answers the keyboard throughout: `j`/`k` walk whatever the view is showing —
+rows, bars, graph nodes — `g g` and `G` reach the ends, `/` puts the caret in
+the query, `1`-`3` switch view, and `?` lists the rest.
+
 ## The query language you already know
 
 The search box speaks TQL — the grammar `tatr ls` accepts. Copy a query out of

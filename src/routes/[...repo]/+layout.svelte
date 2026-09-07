@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { setContext } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import KeyHelp from '#lib/components/KeyHelp.svelte';
+	import Shortcuts from '#lib/components/Shortcuts.svelte';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
 	import { RepositoryState, describeAge, REPOSITORY } from '#lib/state/repository.svelte.ts';
 	import { QUERY, QueryState } from '#lib/state/query.svelte.ts';
@@ -36,12 +39,31 @@
 		return rendered ? `?${rendered}` : '';
 	});
 
+	let helping = $state(false);
+
 	const views = $derived([
 		{ name: 'Overview', base: resolve('/[...repo]', { repo: path }) },
 		{ name: 'List', base: resolve('/[...repo]/list', { repo: path }) },
 		{ name: 'References', base: resolve('/[...repo]/graph', { repo: path }) }
 	]);
+
+	/** `1`-`9` counts positions in the nav, so an absent view simply does nothing. */
+	function switchTo(index: number) {
+		const view = views[index];
+		if (view) goto(view.base + search);
+	}
+
+	/** Escape closes what is open, in the order a reader would expect. */
+	function dismiss() {
+		if (helping) helping = false;
+	}
 </script>
+
+<Shortcuts onview={switchTo} onhelp={() => (helping = !helping)} ondismiss={dismiss} />
+
+{#if helping}
+	<KeyHelp views={views.map((view) => view.name)} onclose={() => (helping = false)} />
+{/if}
 
 <header>
 	<!-- Brand, path and views are set at three sizes, so they are grouped and

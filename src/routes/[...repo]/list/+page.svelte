@@ -95,7 +95,7 @@
 								{/if}
 							</td>
 							<td class="c-prio"><span class="prio">{task.priority}</span></td>
-							<td class="title"><a href={taskHref(task.id)}>{@html inline(task)}</a></td>
+							<td class="title"><a href={taskHref(task.id)} data-key-row>{@html inline(task)}</a></td>
 							<td class="c-tags">
 								{#each task.tags as tag (tag)}
 									<button class="tag" onclick={() => toggleTag(tag)} title={describe(task)}>
@@ -207,6 +207,7 @@
 	.title a:hover {
 		color: var(--accent-text);
 	}
+
 
 	.title :global(code) {
 		font-family: var(--font-mono);

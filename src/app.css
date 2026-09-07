@@ -150,3 +150,63 @@ h2,
 	font-family: var(--font-display);
 	letter-spacing: -0.025em;
 }
+
+/*
+ * One visible focus ring for the whole site, because the keyboard is a first
+ * way to use it rather than a fallback: `j`/`k` move the focus itself, so a
+ * reader who cannot see where it is cannot navigate at all.
+ *
+ * `:focus-visible` rather than `:focus`, so a click does not leave a ring
+ * behind — the browser already knows which of the two the reader used. The
+ * offset keeps the ring off the text it surrounds, and the outline is drawn in
+ * the accent rather than the browser default, which is a blue this palette
+ * does not contain.
+ */
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* A navigable row is styled by the view that draws it: the mark goes on a link
+   or a button, but what should light up is the row, the card or the node around
+   it, and only the view knows which. `data-key-focus` is the keyboard layer's
+   own mark, set because a focus moved by script cannot rely on the browser
+   choosing to match `:focus-visible`. */
+[data-key-focus] {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/*
+ * A row inside a table is a line, not a word: an inline anchor's own ring marks
+ * the few words it wraps, while the reader needs to see which line they are on.
+ * So the table row carries the mark instead, as a filled band with a rule down
+ * its leading edge.
+ *
+ * These live here rather than in each view because `data-key-focus` is set at
+ * runtime, and Svelte's scoped CSS prunes selectors it cannot find in the
+ * markup — the rule would be dropped as unused. The convention is shared
+ * anyway: any view putting a `data-key-row` inside a `tr` gets this.
+ */
+tr:has([data-key-row]:focus-visible),
+tr:has([data-key-row][data-key-focus]) {
+	background: var(--accent-wash);
+	box-shadow: inset 3px 0 0 var(--accent);
+}
+
+tr [data-key-row]:focus-visible,
+tr [data-key-row][data-key-focus] {
+	outline: none;
+}
+
+/* An SVG node draws its own focus, on the circle rather than around the link. */
+svg a[data-key-focus] circle {
+	stroke: var(--accent-text);
+	stroke-width: 3;
+}
+
+svg a[data-key-focus] {
+	outline: none;
+}

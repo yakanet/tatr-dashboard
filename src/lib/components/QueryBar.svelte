@@ -60,6 +60,11 @@
 
 	function onkeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
+			// Consumed only when there is a menu to close, so a second Escape
+			// falls through to the shortcut layer and gives up the field. One
+			// keystroke doing both would leave the reader unable to close the menu
+			// without also leaving the box.
+			if (found) event.preventDefault();
 			dismissed = true;
 			return;
 		}
@@ -111,6 +116,7 @@
 			autocorrect="off"
 			autocomplete="off"
 			aria-label="Query"
+			data-key-search
 			role="combobox"
 			aria-expanded={found !== null}
 			aria-controls="query-completions"
