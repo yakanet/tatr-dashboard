@@ -16,6 +16,7 @@
  * needs from those descriptions, the referenced task ids, is extracted at parse
  * time and kept, so dropping the prose costs no feature.
  */
+import { collectAttachments } from '../tatr/attachments.ts';
 import { readTask, type Task } from '../tatr/task.ts';
 import { parseTaskMd } from '../tatr/task-md.ts';
 import { parseTagsFile, type TagDescriptions } from '../tatr/tags-file.ts';
@@ -122,6 +123,9 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 	const listing = await listRepository(ref, options);
 
 	const taskFiles = listing.entries.filter((entry) => /^tasks\/[^/]+\/TASK\.md$/.test(entry.path));
+	// Free: the whole tree came down in the listing request, and these are the
+	// entries that were being discarded.
+	const attachments = collectAttachments(listing.entries);
 	const hasTasksFolder = listing.entries.some((entry) => entry.path.startsWith('tasks/'));
 	if (!hasTasksFolder) throw new NoTasksFolderError(ref);
 
@@ -159,7 +163,8 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 			skipped.push({ id, reason: 'Could not be parsed' });
 			continue;
 		}
-		tasks.push(task);
+		const carried = attachments.get(id);
+		tasks.push(carried ? { ...task, attachments: carried } : task);
 	}
 
 	// Tag descriptions are optional, and their absence is not an error.

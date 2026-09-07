@@ -3,9 +3,15 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
-	import { renderInline, renderMarkdown, splitJournal } from '#lib/render/markdown.ts';
+	import {
+		renderInline,
+		renderMarkdown,
+		resolveAttachment,
+		splitJournal
+	} from '#lib/render/markdown.ts';
 	import { loadTaskDescription } from '#lib/sources/load.ts';
 	import { REPOSITORY, type RepositoryState } from '#lib/state/repository.svelte.ts';
+	import { formatSize } from '#lib/tatr/attachments.ts';
 
 	let { data } = $props();
 	const ref = $derived(data.ref);
@@ -44,6 +50,12 @@
 	const inline = (source: string) => renderInline(source, renderOptions);
 
 	/** Tasks this one points at, and tasks pointing back at it. */
+	const attachments = $derived(task?.attachments ?? []);
+
+	/** `null` when a path climbs out of `tasks/`, which the panel then shows inert. */
+	const attachmentUrl = (name: string) =>
+		task ? resolveAttachment({ ref, branch: repo.branch, taskId: task.id }, name) : null;
+
 	const outgoing = $derived(
 		(task?.references ?? [])
 			.map((other) => repo.tasks.find((candidate) => candidate.id === other))
@@ -148,6 +160,30 @@
 						{/each}
 					</ul>
 					<p class="note">Found by scanning task text for ids.</p>
+				</section>
+			{/if}
+
+			{#if attachments.length > 0}
+				<section class="panel">
+					<h2>Files</h2>
+					<ul class="files">
+						{#each attachments as file (file.path)}
+							<!-- Through resolveAttachment, which refuses a path climbing out of
+							     tasks/ and pins the host, exactly as a link in the body goes.
+							     Opened in a new tab: these are raw files, not pages of this
+							     site. -->
+							{@const href = attachmentUrl(file.name)}
+							<li>
+								{#if href}
+									<a {href} target="_blank" rel="noreferrer">{file.name}</a>
+								{:else}
+									<span>{file.name}</span>
+								{/if}
+								<span class="size mono">{formatSize(file.size)}</span>
+							</li>
+						{/each}
+					</ul>
+					<p class="note">In the task's folder, beside its <code>TASK.md</code>.</p>
 				</section>
 			{/if}
 
@@ -381,6 +417,27 @@
 		font-size: 0.8rem;
 		color: var(--ink-2);
 		line-height: 1.35;
+	}
+
+	.files li {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+	}
+
+	.files a,
+	.files span:first-child {
+		flex-grow: 1;
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		/* File names run long and have no spaces to break at. */
+		overflow-wrap: anywhere;
+	}
+
+	.size {
+		flex-shrink: 0;
+		font-size: 0.72rem;
+		color: var(--muted);
 	}
 
 	.direction {

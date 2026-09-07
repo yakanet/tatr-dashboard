@@ -2,6 +2,7 @@
  * Assembles a task from its folder name and its `TASK.md`, and orders tasks the
  * way the CLI does.
  */
+import type { Attachment } from './attachments.ts';
 import { parseHuid, scanHuids } from './huid.ts';
 import { isClosed, parseTaskMd, readPriority, readTags } from './task-md.ts';
 
@@ -45,6 +46,12 @@ export interface Task {
 	 * 64-task repository, the descriptions cost 24 kB.
 	 */
 	references: string[];
+	/**
+	 * Other files in the task's folder, from the listing rather than from the
+	 * body — `readTask` only sees one file, so the loader fills this in. Names
+	 * and sizes only, which is metadata and stays in the cache.
+	 */
+	attachments?: Attachment[];
 	/**
 	 * The body. Present when the task was just read, absent when it came from the
 	 * cache, which stores metadata only — fetch it with `loadTaskDescription`.
