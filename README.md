@@ -39,13 +39,14 @@ someone else and land them exactly there.
 | `/yakanet/tatr-dashboard@main` | the same repository, pinned to a branch by name |
 | `/yakanet/tatr-dashboard/list?q=:ui` | the task list, filtered |
 | `/yakanet/tatr-dashboard/task/20260906-211234` | one task, rendered |
+| `/yakanet/tatr-dashboard/board` | backlog, in progress, done |
 | `/yakanet/tatr-dashboard/graph` | which tasks cite which |
 
 Nothing to sign in to, nothing to configure, no repository to register first.
 
 It answers the keyboard throughout: `j`/`k` walk whatever the view is showing —
 rows, bars, graph nodes — `g g` and `G` reach the ends, `/` puts the caret in
-the query, `1`-`3` switch view, and `?` lists the rest.
+the query, `1`-`4` switch view, and `?` lists the rest.
 
 ## The query language you already know
 

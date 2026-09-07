@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 90
-- TAGS: ui,data
+- TAGS: scope,ui,data
 
 A task folder may hold more than its `TASK.md`. On tsoding/tatr seven files do:
 four screenshots, `nob.h`, `path.c` and a `.gitignore`, with `20260321-181305`

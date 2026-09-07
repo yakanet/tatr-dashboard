@@ -44,6 +44,7 @@
 	const views = $derived([
 		{ name: 'Overview', base: resolve('/[...repo]', { repo: path }) },
 		{ name: 'List', base: resolve('/[...repo]/list', { repo: path }) },
+		{ name: 'Board', base: resolve('/[...repo]/board', { repo: path }) },
 		{ name: 'References', base: resolve('/[...repo]/graph', { repo: path }) }
 	]);
 
