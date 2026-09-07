@@ -164,9 +164,9 @@
 					</p>
 				{:else}
 					<p class="accepts">
-						Your browser will ask first, and count the files — pick just the <code>tasks/</code>
-						folder to keep that number small. Nothing is uploaded: there is no server to upload
-						to.
+						Picking a folder makes your browser count its files first — choose just the
+						<code>tasks/</code> folder to keep that number small, or drop the folder here
+						instead. Nothing is uploaded: there is no server to upload to.
 					</p>
 				{/if}
 			{/if}

@@ -44,7 +44,7 @@
 			<h2>No folder open</h2>
 			<p>
 				A folder is read where it sits, so the browser only grants access while you are here — a
-				reload takes it back. Choose it again to carry on.
+				reload takes it back. Choose or drop it again to carry on.
 			</p>
 		{:else if repo.failure.kind === 'no-tasks-folder'}
 			<h2>No tasks folder</h2>

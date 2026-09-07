@@ -131,11 +131,16 @@ an address, and `/local` is a marker rather than a link anyone else could
 follow. The branch comes from `.git/HEAD`, which is a file like any other; the
 `tasks/` folder is all that is read.
 
-Where your browser has the File System Access API — Chromium, today, and Brave
-ships it turned off — the folder is remembered for the tab and **Refresh**
-rereads it, so a task you close in your editor shows up closed. Everywhere else
-the folder arrives as one snapshot and refreshing means picking it again, which
-the button says.
+**Or drag the folder onto the page**, which is the widest door of the three: the
+API behind a drop exists in every browser, and on Chromium a dropped folder even
+arrives as a handle — the good kind of source.
+
+Because that is what separates the three ways in. A handle can be walked again,
+so **Refresh** rereads the folder and a task you closed in your editor shows up
+closed; a handle comes from a drop or from the File System Access API, which is
+Chromium today and which Brave ships turned off. The directory input, everywhere
+else, hands over one snapshot, and refreshing means picking again — which the
+button says instead of pretending.
 
 Either way your browser asks first, and the two ask differently — so the page
 says which one is coming before you click. The picker asks for access to that
