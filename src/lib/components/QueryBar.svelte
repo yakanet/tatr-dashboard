@@ -9,7 +9,8 @@
 		matched,
 		pool,
 		tags,
-		onchange
+		onchange,
+		closedToggle = true
 	}: {
 		query: QueryState;
 		matched: number;
@@ -17,6 +18,12 @@
 		/** The repository's tags, so the box can offer them by name. */
 		tags: TagOption[];
 		onchange?: () => void;
+		/**
+		 * False where hiding closed tasks means nothing. On the board they are a
+		 * column of their own, and a switch that emptied it would be answering a
+		 * question the columns already answer.
+		 */
+		closedToggle?: boolean;
 	} = $props();
 
 	let field = $state<HTMLInputElement | null>(null);
@@ -162,10 +169,12 @@
 		{/if}
 	</div>
 	<span class="count"><strong>{matched}</strong> matched <span class="of">/ {pool} shown</span></span>
-	<label class="closed">
-		<input type="checkbox" bind:checked={query.showClosed} onchange={onchange} />
-		closed
-	</label>
+	{#if closedToggle}
+		<label class="closed">
+			<input type="checkbox" bind:checked={query.showClosed} onchange={onchange} />
+			closed
+		</label>
+	{/if}
 </div>
 
 {#if query.error}

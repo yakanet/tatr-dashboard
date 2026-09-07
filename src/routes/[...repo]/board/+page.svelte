@@ -21,25 +21,21 @@
 	const query = getContext<QueryState>(QUERY);
 
 	/*
-	 * The query narrows each column; the closed toggle removes one.
+	 * The query narrows each column, and the closed toggle has no say here.
 	 *
-	 * `apply` would drop closed tasks before the columns exist, which empties Done
-	 * rather than narrowing it. So the query goes in as a predicate and the toggle
-	 * is answered by hiding the column outright — which is what a reader asking
-	 * for open tasks means on a board, and keeps every header true to its
-	 * contents.
+	 * Closed tasks are a column on this view, so hiding them would empty a column
+	 * headed "closed" — a question the board answers by its shape. The bar drops
+	 * the switch rather than reinterpreting it, and `matches` is the query without
+	 * the status filter that `apply` would have imposed.
 	 */
-	const columns = $derived(
-		toColumns(repo.tasks, (task) => query.matches(task)).filter(
-			(column) => query.showClosed || column.key !== 'done'
-		)
-	);
+	const columns = $derived(toColumns(repo.tasks, (task) => query.matches(task)));
 
 	const matched = $derived(columns.reduce((n, column) => n + column.tasks.length, 0));
 	const pool = $derived(columns.reduce((n, column) => n + column.total, 0));
 
+	// Counted over everything, the board showing everything.
 	const tagOptions = $derived(
-		byTag(query.showClosed ? repo.tasks : repo.open).map(({ tag, count }) => ({
+		byTag(repo.tasks).map(({ tag, count }) => ({
 			name: tag,
 			description: repo.tags.descriptions.get(tag),
 			count
@@ -50,8 +46,6 @@
 		const url = new URL(page.url.href);
 		if (query.text.trim()) url.searchParams.set('q', query.text.trim());
 		else url.searchParams.delete('q');
-		if (query.showClosed) url.searchParams.set('closed', '1');
-		else url.searchParams.delete('closed');
 		replaceState(url, page.state);
 	}
 
@@ -66,7 +60,7 @@
 	<title>{ref.owner}/{ref.name} — board</title>
 </svelte:head>
 
-<QueryBar {query} {matched} {pool} tags={tagOptions} onchange={syncUrl} />
+<QueryBar {query} {matched} {pool} tags={tagOptions} onchange={syncUrl} closedToggle={false} />
 
 <main>
 	<RepoStatus {repo} {ref} />

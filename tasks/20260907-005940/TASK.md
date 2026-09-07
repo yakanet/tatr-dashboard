@@ -36,13 +36,17 @@ belongs to whether or not it matched — the query can narrow a column and never
 move a card between two. `:tql` with closed shown reads Backlog 2/21, In
 progress 0/2, Done 6/41.
 
-**The closed toggle hides the Done column.** Passing the query through `apply`
-would have dropped closed tasks before the columns existed, emptying Done rather
-than narrowing it — a column headed "closed" holding nothing. Hiding it outright
-is what a reader asking for open tasks means on a board, and it leaves every
-remaining header true to its contents. `QueryState` gained `matches(task)` for
-this, the query without the status filter, and `apply` is now that plus the
-filter rather than a second implementation.
+**The closed toggle is gone from this view**, which was the first of the two
+options and the right one. Closed tasks are a column here, so the switch was
+answering a question the board already answers by its shape — and the version
+that hid the Done column meant a reader could arrive from the list to find a
+third of the board missing with nothing on screen to say why. `QueryBar` takes
+`closedToggle`, and the board shows its three columns always.
+
+That still needed `QueryState.matches(task)` — the query without the status
+filter — because `apply` would otherwise have dropped closed tasks before the
+columns existed, emptying Done rather than narrowing it. `apply` is now
+`matches` plus the filter rather than a second implementation.
 
 The query is shared with the list, so a filter set in either is there in the
 other, which is how the rest of the product already behaves.
