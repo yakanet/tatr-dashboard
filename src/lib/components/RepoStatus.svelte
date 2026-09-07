@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { formatRepoPath, type RepoRef } from '#lib/repo/ref.ts';
+	import FolderPicker from '#lib/components/FolderPicker.svelte';
+	import { describeRef, formatRepoPath, isLocal, type RepoRef } from '#lib/repo/ref.ts';
 	import type { RepositoryState } from '#lib/state/repository.svelte.ts';
 
 	let { repo, ref }: { repo: RepositoryState; ref: RepoRef } = $props();
@@ -39,11 +40,17 @@
 		{:else if repo.failure.kind === 'not-found'}
 			<h2>Not found</h2>
 			<p>No repository at <code>{formatRepoPath(ref)}</code>, or it is private.</p>
+		{:else if repo.failure.kind === 'no-folder'}
+			<h2>No folder open</h2>
+			<p>
+				A folder is read where it sits, so the browser only grants access while you are here — a
+				reload takes it back. Choose it again to carry on.
+			</p>
 		{:else if repo.failure.kind === 'no-tasks-folder'}
 			<h2>No tasks folder</h2>
 			<p>
-				<code>{ref.owner}/{ref.name}</code> was read, but it has no <code>tasks/</code> directory at
-				its root.
+				<code>{describeRef(ref)}</code> was read, but it has no <code>tasks/</code> directory at its
+				root.
 			</p>
 			<p class="note">
 				This viewer expects the tatr layout: one folder per task, each holding a
@@ -57,7 +64,11 @@
 			<p>{repo.failure.message}</p>
 		{/if}
 		<div class="actions">
-			<button onclick={() => repo.load(ref, true)}>Try again</button>
+			{#if isLocal(ref)}
+				<FolderPicker label="Choose a folder…" />
+			{:else}
+				<button onclick={() => repo.load(ref, true)}>Try again</button>
+			{/if}
 			<a href={resolve('/')}>Another repository</a>
 		</div>
 	</section>

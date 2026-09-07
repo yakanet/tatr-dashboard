@@ -117,6 +117,35 @@ The only third-party request left anywhere is the webfont stylesheet, and
 bringing it in-house is
 [task `20260906-211248`](https://github.broutin.dev/tatr-dashboard/yakanet/tatr-dashboard/task/20260906-211248).
 
+## Or a folder on your own machine
+
+The one repository a public URL cannot reach is the one you are working in.
+**Open a folder** instead, and the browser reads it where it sits — private,
+unpushed, offline, whatever is checked out right now, including the task you
+have not committed yet.
+
+Nothing is uploaded, and nothing could be: the page has no server to upload to.
+Your browser grants access to that one folder, for as long as the tab is open,
+and takes it back when you reload — so a local folder is a session rather than
+an address, and `/local` is a marker rather than a link anyone else could
+follow. The branch comes from `.git/HEAD`, which is a file like any other; the
+`tasks/` folder is all that is read.
+
+Where your browser has the File System Access API — Chromium, today, and Brave
+ships it turned off — the folder is remembered for the tab and **Refresh**
+rereads it, so a task you close in your editor shows up closed. Everywhere else
+the folder arrives as one snapshot and refreshing means picking it again, which
+the button says.
+
+Either way your browser asks first, and the two ask differently — so the page
+says which one is coming before you click. The picker asks for access to that
+one folder. The directory input asks by the *file count*, because it cannot know
+that this page will not upload what it is given: a whole checkout produces
+*"import 7,775 files?"*, most of which is `node_modules`, and all but the
+`tasks/` folder is discarded on arrival. Picking `tasks/` directly is accepted
+for exactly that reason, and costs only the branch name, which lives in
+`.git/HEAD` one level up.
+
 ## Identical to the CLI — and that claim is tested
 
 The format parser and the query language are ported from the C source, not from

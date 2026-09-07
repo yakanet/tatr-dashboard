@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import rawTasks from '../../../tests/fixtures/tsoding-tatr-raw.json' with { type: 'json' };
 import { parseRepoPath } from '../repo/ref.ts';
 import { memoryStore } from './store.ts';
-import { NoTasksFolderError, loadRepository, listRepository } from './load.ts';
+import { NoFolderError, NoTasksFolderError, loadRepository, listRepository } from './load.ts';
+import { closeFolder, fromFileList, openFolder } from './local.ts';
+import { localRef } from '../repo/ref.ts';
 import { ProviderError, type Listing, type Provider } from './provider.ts';
 
 const sources = rawTasks as Record<string, string>;
@@ -420,5 +422,84 @@ describe('what the reader last saw', () => {
 		await loadRepository(ref, { ...options, now: () => 1_000 });
 		const again = await loadRepository(ref, { ...options, refresh: true, now: () => 2_000 });
 		expect(again.previous?.tasks).toEqual([{ id: a, closed: false, priority: 90, tags: ['ui'] }]);
+	});
+});
+
+/** A file as the directory input reports it. */
+function dropped(path: string, text: string): File {
+	const file = new File([text], path.split('/').pop()!);
+	Object.defineProperty(file, 'webkitRelativePath', { value: `my-project/${path}` });
+	return file;
+}
+
+describe('a folder on this machine', () => {
+	const open = (files: File[]) => {
+		const folder = fromFileList(files);
+		if (folder) openFolder(folder);
+		return localRef();
+	};
+
+	const task = (id: string, priority: number, status = 'OPEN') =>
+		dropped(`tasks/${id}/TASK.md`, `# ${id}\n\n- STATUS: ${status}\n- PRIORITY: ${priority}\n- TAGS: ui\n`);
+
+	afterEach(() => closeFolder());
+
+	it('reads the tasks the folder holds', async () => {
+		const ref = open([task('20260101-000001', 90), task('20260101-000002', 50, 'CLOSED')]);
+		const result = await loadRepository(ref, { store });
+		expect(result.tasks.map((one) => one.id)).toEqual(['20260101-000001', '20260101-000002']);
+		expect(result.label).toBe('my-project');
+	});
+
+	it('spends no quota and asks no provider, there being nothing to ask', async () => {
+		const provider = fakeProvider('github');
+		const spy = vi.spyOn(provider, 'list');
+		await loadRepository(open([task('20260101-000001', 90)]), { providers: [provider], store });
+		expect(spy).not.toHaveBeenCalled();
+	});
+
+	it('is never served from the cache, nor written to it', async () => {
+		// Reading the folder is free and a stored copy of a folder someone is
+		// editing would be wrong before it was written.
+		const ref = open([task('20260101-000001', 90)]);
+		const first = await loadRepository(ref, { store });
+		expect(first.fromCache).toBe(false);
+		expect(await store.list()).toEqual([]);
+
+		openFolder(fromFileList([task('20260101-000001', 110)])!);
+		const second = await loadRepository(ref, { store });
+		expect(second.fromCache).toBe(false);
+		expect(second.tasks[0].priority).toBe(110);
+	});
+
+	it('reads the tag descriptions, which are a file like any other', async () => {
+		const ref = open([task('20260101-000001', 90), dropped('tasks/tags', 'ui , screens\n')]);
+		const result = await loadRepository(ref, { store });
+		expect(result.tags.descriptions.get('ui')).toBe('screens');
+	});
+
+	it('names the checked-out branch, or says it is a working tree', async () => {
+		const withHead = open([task('20260101-000001', 90), dropped('.git/HEAD', 'ref: refs/heads/wip\n')]);
+		expect((await loadRepository(withHead, { store })).branch).toBe('wip');
+		expect((await loadRepository(open([task('20260101-000001', 90)]), { store })).branch).toBe(
+			'working tree'
+		);
+	});
+
+	it('reports a folder that is not a tatr repository as one, not as none', async () => {
+		// It was opened; it simply holds no tasks, which is what the reader has to
+		// be told — the same thing a repository without the folder is told.
+		const ref = open([dropped('src/app.css', 'body{}'), dropped('README.md', '# a project\n')]);
+		await expect(loadRepository(ref, { store })).rejects.toThrow(NoTasksFolderError);
+	});
+
+	it('says so when there is no folder open at all, as after a reload', async () => {
+		closeFolder();
+		await expect(loadRepository(localRef(), { store })).rejects.toThrow(NoFolderError);
+	});
+
+	it('has nothing to compare against: a folder keeps no previous reading', async () => {
+		const result = await loadRepository(open([task('20260101-000001', 90)]), { store });
+		expect(result.previous).toBeNull();
 	});
 });

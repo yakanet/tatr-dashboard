@@ -94,3 +94,108 @@ The first three become `read(path)` and `assetUrl(path)`. The fourth has no
 local equivalent at all — there is no page to link to — so the Source panel is
 simply absent for a local folder, which is the first honest sign that a source
 is not a forge.
+
+---
+
+Built on the `local-folder` branch, and it reads a folder end to end: the
+overview, the list, the board, the references and a task's own page, with the
+query bar and the keyboard working as they do on a repository.
+
+**One module reads the folder, two doors open it.** `fromFileList` takes what
+the directory input hands over and recovers the paths from `webkitRelativePath`;
+`fromDirectoryHandle` walks a handle. Both produce a name and a map of paths to
+files, so nothing downstream knows which door was used. The map keeps only
+`tasks/**` and `.git/HEAD` — a checkout holds a hundred thousand files that are
+none of this viewer's business, and the reader picked the repository rather than
+a subfolder of it.
+
+**The loader gained a branch, not a rewrite.** Both sources arrive at the same
+`assemble()` with the same pairs of path and text, which was extracted for it;
+what differs is where the pairs came from. The four URL call sites the study
+found came out as expected — reading is `readFile`, an attachment or an image is
+a `blob:` from `assetUrl`, and the Source panel is simply absent, there being no
+page on any forge to link to.
+
+**Nothing is cached, deliberately.** The cache exists to protect an API budget
+this source does not spend, and a stored copy of a folder someone is editing
+would be wrong before it was written. A test pins that: reading twice re-reads,
+and the store stays empty. Which also means the folder never appears in the
+homepage's list of repositories already read — it is not one.
+
+**A local reference is one URL segment.** `/local`, and the folder's name is
+deliberately not in it: nobody else's machine could follow that address. The
+name travels on the reading instead — `LoadResult.label`, which is not cached
+because it is derived — and the header and every page title take it from there.
+`local` is free as a segment because a repository on a forge needs an owner too,
+so one segment can never be one.
+
+**A reload is a dead end, and says so.** The browser takes the grant back, so
+`/local` after a reload shows *No folder open* with the reason and the way out
+rather than an error. Where the picker exists its handle is kept and Refresh
+rereads the folder; where it does not, the button reads `Reopen…` and asks
+again, because a `FileList` is a snapshot with no way back.
+
+Verified in the browser by planting a folder through the module and walking
+every view: the header names it, `.git/HEAD` gives the branch, a body's image
+renders from a `blob:`, the Files panel lists the attachment with its size, the
+reference between two tasks resolves, and a reload lands on the panel above.
+
+**Found by using it, in Brave.** The directory input makes the browser ask
+before handing anything over, and it asks by the file count: it cannot know the
+page will not upload what it is given, so a whole checkout produces *"import
+7,775 files?"* — of which this viewer keeps about forty. The filter runs after
+the browser has already enumerated everything, so it cannot help with the
+question.
+
+What helps is accepting `tasks/` as the picked folder: the same question then
+counts the tasks alone. A folder of task folders is recognised by the layout
+itself — a `TASK.md` one level down and nothing under `tasks/` — and the paths
+are put back before anything else sees them. It costs `.git/HEAD`, which is to
+say the branch name, and the folder is then called `tasks` in the header. Both
+are said on the homepage, alongside the fact that nothing is uploaded, because a
+warning nobody expected reads as a warning about the site.
+
+Brave also turned out to ship File System Access disabled, so it took the input
+path and the header offered `Reopen…` — the fallback working as intended, and a
+reminder that "Chromium" is not one browser.
+
+**Two ways in, one at a time.** The homepage carries a tab list rather than a
+stacked pair: each door needs a line of explanation, and stacked they read as
+one crowded instruction rather than a choice. They wear the header's own
+underline, one idiom for one meaning, and the arrow keys move between them,
+which is what makes them tabs rather than two buttons.
+
+The local panel then says what *this* browser is about to ask, which caught a
+line that was wrong for half the readers: the picker asks for access to one
+folder and never counts files, so the count warning belongs to the input alone.
+A browser with neither door says so instead of offering a button that cannot
+work. `folderAccess()` decides it once, and the panel only renders after a
+click, so the prerendered HTML never carries an answer to correct.
+
+Simplified before landing, and one of the three was a performance bug rather
+than tidying: the walk descended everything and filtered afterwards, which on a
+real repository means reading `node_modules` and every loose object under `.git`
+to arrive at the same forty files. A handle can be asked for a path by name, so
+`tasks/` is the only directory descended and `.git/HEAD` is fetched directly.
+The skip list of build folders went with it — there is nothing left to skip.
+
+That also narrowed `looksLikeTasksFolder` to the directory input, which is the
+only door that has to read the shape out of flat paths.
+
+And the name of a reading moved onto the state as `repo.name`, which had been
+the same `$derived` line in five page scripts and a sixth in the header. The
+state knows what it read and what it is reading; a view should not work it out
+again.
+
+Still open before this is worth merging:
+
+- **The picker itself has still never been clicked.** The input path has now
+  been used on this repository and read all 32 tasks; `showDirectoryPicker`
+  needs a browser that exposes it and a human gesture.
+- **Nothing persists between visits.** The handle is structured-clonable and
+  `isSameEntry` works, both checked while studying this, so the folder could be
+  remembered and re-granted with one click. Not built.
+- **What moved since the last reading is always empty** for a folder, since it
+  is the cache that carries the previous state. It would want its own snapshot.
+- **No drag and drop.** `webkitGetAsEntry` is supported and would suit dropping
+  a folder on the homepage.

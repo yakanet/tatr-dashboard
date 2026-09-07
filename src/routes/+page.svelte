@@ -1,14 +1,40 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import FolderPicker from '#lib/components/FolderPicker.svelte';
 	import Mark from '#lib/components/Mark.svelte';
 	import { formatRepoPath, parseRepoInput } from '#lib/repo/ref.ts';
 	import { toSuggestions, type CachedShape, type Suggestion } from '#lib/repo/recent.ts';
+	import { folderAccess } from '#lib/sources/local.ts';
 	import { openStore } from '#lib/sources/store.ts';
 	import { describeAge } from '#lib/state/repository.svelte.ts';
 
+	/** The two ways in, in the order the tabs read. */
+	const WHERE = [
+		{ id: 'remote', name: 'A repository' },
+		{ id: 'local', name: 'A folder' }
+	] as const;
+
+	let where = $state<'remote' | 'local'>('remote');
+	/**
+	 * Read once, in the browser: the local panel only ever renders after a click,
+	 * so the prerendered HTML never carries an answer to correct.
+	 */
+	const access = folderAccess();
 	let input = $state('');
 	let error = $state<string | null>(null);
+
+	/** Arrow keys move between tabs, which is what makes them tabs. */
+	function move(event: KeyboardEvent) {
+		const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+		if (step === 0) return;
+		event.preventDefault();
+		const at = WHERE.findIndex((option) => option.id === where);
+		const next = WHERE[(at + step + WHERE.length) % WHERE.length];
+		where = next.id;
+		// The focus follows the selection, as it does in a tab list.
+		document.getElementById(`tab-${next.id}`)?.focus();
+	}
 	let suggestions = $state<Suggestion[]>([]);
 
 	/**
@@ -60,37 +86,91 @@
 
 	<h1>Read any <code>tasks/</code> folder as a dashboard.</h1>
 	<p class="lead">
-		Point it at a public repository that follows the
-		<a href="https://github.com/tsoding/tatr">tatr</a> layout. Nothing is uploaded — the files are
-		read straight from the forge, in your browser, and cached there.
+		Point it at any repository that follows the
+		<a href="https://github.com/tsoding/tatr">tatr</a> layout, or at a folder on this machine.
+		Nothing is uploaded — the files are read in your browser.
 	</p>
 
-	<form onsubmit={open}>
-		<span class="field">
-			<svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-				stroke-linecap="round" aria-hidden="true"
-				><circle cx="11" cy="11" r="7" /><path d="m20 20-4.3-4.3" /></svg
+	<!-- Two ways in, one at a time: each needs a line of explanation, and stacked
+	     they read as one crowded instruction rather than a choice. -->
+	<div class="tabs" role="tablist" aria-label="Where the tasks are">
+		{#each WHERE as option (option.id)}
+			<button
+				type="button"
+				role="tab"
+				id="tab-{option.id}"
+				aria-selected={where === option.id}
+				aria-controls="panel-{option.id}"
+				tabindex={where === option.id ? 0 : -1}
+				class:current={where === option.id}
+				onclick={() => (where = option.id)}
+				onkeydown={move}
 			>
-			<input
-				bind:value={input}
-				placeholder="owner/name"
-				aria-label="Repository"
-				autocapitalize="off"
-				autocorrect="off"
-				autocomplete="off"
-				spellcheck="false"
-			/>
-		</span>
-		<button type="submit">Open</button>
-	</form>
+				{option.name}
+			</button>
+		{/each}
+	</div>
 
-	<!-- The parser takes all four, and nothing on screen admitted it. -->
-	<p class="accepts">
-		Accepts <code>owner/name</code>, a full URL, an SSH remote, or <code>owner/name@branch</code>.
-	</p>
+	{#if where === 'remote'}
+		<div role="tabpanel" id="panel-remote" aria-labelledby="tab-remote">
+			<form onsubmit={open}>
+				<span class="field">
+					<svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" aria-hidden="true"
+						><circle cx="11" cy="11" r="7" /><path d="m20 20-4.3-4.3" /></svg
+					>
+					<input
+						bind:value={input}
+						placeholder="owner/name"
+						aria-label="Repository"
+						autocapitalize="off"
+						autocorrect="off"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+				</span>
+				<button type="submit">Open</button>
+			</form>
 
-	{#if error}
-		<p class="error">{error}</p>
+			<!-- The parser takes all four, and nothing on screen admitted it. -->
+			<p class="accepts">
+				Accepts <code>owner/name</code>, a full URL, an SSH remote, or
+				<code>owner/name@branch</code>.
+			</p>
+
+			{#if error}
+				<p class="error">{error}</p>
+			{/if}
+		</div>
+	{:else}
+		<!-- The one repository a public URL cannot reach is the one being worked in. -->
+		<div role="tabpanel" id="panel-local" aria-labelledby="tab-local">
+			{#if access === 'none'}
+				<p class="accepts">
+					This browser cannot open a folder: it has neither the File System Access API nor
+					directory selection. A repository still works.
+				</p>
+			{:else}
+				<div class="local">
+					<FolderPicker />
+					<span class="hint">private, unpushed, offline — whatever is checked out right now</span>
+				</div>
+				<!-- What the browser is about to ask depends on which door it has, and
+				     a surprise dialog reads as a warning about this site. -->
+				{#if access === 'picker'}
+					<p class="accepts">
+						Your browser will ask for access to that one folder, and <strong>Refresh</strong> will
+						reread it. Nothing is uploaded: there is no server to upload to.
+					</p>
+				{:else}
+					<p class="accepts">
+						Your browser will ask first, and count the files — pick just the <code>tasks/</code>
+						folder to keep that number small. Nothing is uploaded: there is no server to upload
+						to.
+					</p>
+				{/if}
+			{/if}
+		</div>
 	{/if}
 
 	{#if suggestions.length > 0}
@@ -162,6 +242,31 @@
 		color: var(--accent-text);
 	}
 
+	/* The same underline the header's nav uses, one idiom for one meaning. */
+	.tabs {
+		display: flex;
+		gap: 1.1rem;
+		margin-bottom: 1rem;
+	}
+
+	.tabs button {
+		padding: 0 0 3px;
+		font: inherit;
+		font-size: 0.9rem;
+		color: var(--ink-2);
+		background: none;
+		border: none;
+		border-bottom: 2px solid transparent;
+		border-radius: 0;
+		cursor: pointer;
+	}
+
+	.tabs button.current {
+		color: var(--fg);
+		font-weight: 500;
+		border-bottom-color: var(--accent);
+	}
+
 	form {
 		display: flex;
 		gap: 0.6rem;
@@ -217,6 +322,18 @@
 	.accepts,
 	.scheme {
 		margin: 0.6rem 0 0;
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+
+	.local {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.local .hint {
 		font-size: 0.8rem;
 		color: var(--muted);
 	}
