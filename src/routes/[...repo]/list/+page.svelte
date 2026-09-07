@@ -170,6 +170,12 @@
 		width: 3rem;
 	}
 
+	/* Inline after the title here, so the word space it inherits from the flow is
+	   not quite enough to clear a bordered badge. */
+	.title [data-moved] {
+		margin-left: 0.25rem;
+	}
+
 	.c-tags {
 		width: 12rem;
 	}

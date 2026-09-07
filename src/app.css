@@ -201,7 +201,6 @@ tr [data-key-row][data-key-focus] {
    meanings on one channel is one too many. Here rather than in each view for the
    same reason as the rules above, one convention being one rule. */
 [data-moved] {
-	margin-left: 0.5rem;
 	padding: 0.05rem 0.3rem;
 	font-size: 0.7rem;
 	font-weight: 500;

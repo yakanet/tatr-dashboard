@@ -92,14 +92,12 @@
 										<span class="prio mono" class:muted={column.key === 'done'}>
 											{task.priority}
 										</span>
-										<span class="title">
-											{@html inline(task)}
-											{#if moves}
-												<span data-moved title={repo.describeMoves(moves)}>{moves[0]}</span>
-											{/if}
-										</span>
-										{#if task.tags.length > 0}
-											<span class="tags">
+										<span class="title">{@html inline(task)}</span>
+										{#if moves || task.tags.length > 0}
+											<span class="meta">
+												{#if moves}
+													<span data-moved title={repo.describeMoves(moves)}>{moves[0]}</span>
+												{/if}
 												{#each task.tags as tag (tag)}
 													<span class="tag mono" title={describe(tag)}>{tag}</span>
 												{/each}
@@ -237,7 +235,10 @@
 		line-height: 1.4;
 	}
 
-	.tags {
+	/* A card's title wraps, and a badge sitting in that flow lands alone on a
+	   line of its own as soon as the last word fills the card. Down here it is
+	   the first thing on a line that already exists, beside the tags. */
+	.meta {
 		grid-column: 2;
 		display: flex;
 		flex-wrap: wrap;

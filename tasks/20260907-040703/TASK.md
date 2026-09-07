@@ -99,6 +99,14 @@ nothing reset the snapshot at the start of a load, so moving from one repository
 to another announced the first one's news over the second one's tasks. A
 comparison belongs to the reading that produced it, and `load` now says so.
 
+The card places its badge on the meta line with the tags, not inline after the
+title as the list does — the two views disagreeing here on purpose. A card's
+title wraps, and a badge in that flow lands alone on a line of its own as soon
+as the last word reaches the card's edge, which is what a reader sees as a badge
+out of place. On a line that already exists it is simply the first thing on it.
+The badge keeps one look, in `app.css`; spacing belongs to whichever view puts
+it somewhere, so the shared rule carries none.
+
 One trap hit twice now: the tag comparison first joined on a NUL, which is a
 fine separator and makes git store a `.ts` file as binary — the same thing that
 happened to the reference graph. A comma does the job, the format splitting tags
