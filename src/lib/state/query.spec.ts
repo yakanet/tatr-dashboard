@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesTitle, QueryState } from './query.svelte.ts';
+import { QueryState } from './query.svelte.ts';
 import { readTask, type Task } from '../tatr/task.ts';
 
 const make = (id: string, priority: number, tags: string[], closed = false): Task =>
@@ -71,50 +71,33 @@ describe('QueryState', () => {
 	});
 });
 
-describe('matchesTitle', () => {
-	it('ignores case', () => {
-		expect(matchesTitle('Windows support', 'windows')).toBe(true);
-	});
-
-	it('matches inside a word', () => {
-		expect(matchesTitle('Windows support', 'ndows')).toBe(true);
-	});
-
-	it('wants every word, in any order', () => {
-		expect(matchesTitle('Windows support', 'support windows')).toBe(true);
-		expect(matchesTitle('Windows support', 'windows linux')).toBe(false);
-	});
-
-	it('ignores the spacing between words', () => {
-		expect(matchesTitle('Windows support', '  windows   support ')).toBe(true);
-	});
-
-	it('matches everything when there is nothing to match', () => {
-		expect(matchesTitle('Windows support', '   ')).toBe(true);
-	});
-});
-
-describe('the text filter beside the query', () => {
+describe('the ~ term, through the state', () => {
 	it('narrows the query rather than replacing it', () => {
-		const query = new QueryState();
-		query.text = ':bug';
-		query.search = 'windows';
-		expect(query.apply([titled('Windows support'), ...tasks])).toEqual([]);
+		expect(withText(':bug and ~windows').apply([titled('Windows support'), ...tasks])).toEqual([]);
 	});
 
-	it('filters on its own with no query at all', () => {
-		const query = new QueryState();
-		query.search = 'windows';
-		expect(query.apply([titled('Windows support'), ...tasks]).map((t) => t.title)).toEqual([
-			'Windows support'
-		]);
+	it('filters on its own', () => {
+		expect(
+			withText('~windows')
+				.apply([titled('Windows support'), ...tasks])
+				.map((task) => task.title)
+		).toEqual(['Windows support']);
 	});
 
 	it('still hides closed tasks unless asked', () => {
-		const query = new QueryState();
-		query.search = 't';
+		const query = withText('~t');
 		expect(query.apply(tasks)).toHaveLength(2);
 		query.showClosed = true;
 		expect(query.apply(tasks)).toHaveLength(3);
+	});
+
+	it('reports an unterminated quote instead of throwing', () => {
+		const query = withText('~"windows sup');
+		expect(query.error?.message).toBe('Unterminated quote');
+		expect(query.apply(tasks)).toHaveLength(2);
+	});
+
+	it('reports a ~ used where a number belongs', () => {
+		expect(withText('priority eq ~x').error?.message).toContain('Expected integer');
 	});
 });

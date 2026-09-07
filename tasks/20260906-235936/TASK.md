@@ -1,6 +1,6 @@
 # Fold the title filter into the query language, as a `~` term
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 80
 - TAGS: tql,ui
 
@@ -46,3 +46,36 @@ What to settle while building it:
 The differential tests are the safety rail: 34 query invocations replayed from
 the real binary must still pass unchanged, since adding a primary may not alter
 any query the CLI can express.
+
+---
+
+Done. One box again, and the language gained the primary it was missing.
+
+    ~query                     titles holding "query"
+    ~"support windows"         holding both words, in any order
+    ~windows and :bug          composes like any other primary
+    not ~emacs
+
+The tokenizer needed the smaller half of the work: it cuts on whitespace and
+brackets, so `~"windows support"` arrived as two tokens. A quoted run now
+belongs to the token it sits in, which leaves an unterminated quote reaching the
+end of the source — where the parser reports it, since that is what typing looks
+like halfway through.
+
+The divergence stayed as small as it could be. `"windows"` without a `~` is
+still `Unknown token`: nothing in the C grammar spells a string, and quietly
+turning one into a search would widen the gap for no gain. Diagnostics cover a
+bare `~`, an unterminated quote and an empty phrase, each with a span.
+
+What confirmed it was safe: none of the 34 replayed CLI invocations contains a
+quote or a tilde, so the new primary cannot alter any query the reference
+implementation can express — and the fixtures pass unchanged.
+
+Gone with it: the separate `filter titles` field, its `text=` URL parameter, and
+`matchesTitle` from the state — the matcher belongs to the language now.
+Completion stays silent inside a `~` term, where neither a tag nor a keyword can
+appear.
+
+Written up in the README, and in the project instructions as a new rule:
+additions are allowed where the CLI simply cannot do the thing, never changes to
+what it can.

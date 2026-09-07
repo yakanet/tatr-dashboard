@@ -1,18 +1,30 @@
 /**
  * TQL — the Tatr Query Language, as accepted by `tatr ls`.
  *
- * This is a faithful port of the reference implementation in `src/query.c`, so a
- * query copied from the shell behaves identically here. The grammar:
+ * A port of the reference implementation in `src/query.c`, with one addition of
+ * our own. The grammar:
  *
  *     expr    ::= or
  *     or      ::= and *( 'or' and )
  *     and     ::= compare *( 'and' compare )
  *     compare ::= primary *( ('lt'|'le'|'gt'|'ge'|'eq'|'ne') primary )
- *     primary ::= ':' tag | '[' expr ']' | 'not' primary
- *               | 'any' | 'tagged' | 'priority' | number
+ *     primary ::= ':' tag | '~' word | '~' '"' words '"' | '[' expr ']'
+ *               | 'not' primary | 'any' | 'tagged' | 'priority' | number
  *
  * Square brackets group instead of parentheses, and comparisons are spelled as
  * words, so a query survives a shell without quoting.
+ *
+ * `~` searches titles, and it is the one thing the C implementation has no
+ * notion of. The divergence is deliberate and one-directional: every query the
+ * CLI accepts still behaves identically here, but a query written with `~` will
+ * not run there. A browser reader has no `grep` beside the tool, so the
+ * alternative was a second input box next to this language — which read as two
+ * unrelated ways to say one thing.
+ *
+ * `~` rather than a bare quoted string, because the match is loose — every word,
+ * in any order, case ignored — and quotes promise a phrase everywhere else.
+ * With `~` carrying that meaning, quotes are left doing the one honest job of
+ * grouping words that contain spaces.
  *
  * Evaluation is typed: `and`, `or` and `not` take booleans, the comparison
  * operators take integers, and the whole query must yield a boolean. Type errors
@@ -29,6 +41,7 @@ export type BinaryOp = 'and' | 'or' | 'lt' | 'le' | 'gt' | 'ge' | 'eq' | 'ne';
 
 export type Node =
 	| { kind: 'tag'; name: string; span: Span }
+	| { kind: 'text'; value: string; span: Span }
 	| { kind: 'any'; span: Span }
 	| { kind: 'tagged'; span: Span }
 	| { kind: 'priority'; span: Span }
@@ -40,17 +53,51 @@ export type Node =
 export interface TqlTask {
 	readonly tags: readonly string[];
 	readonly priority: number;
+	/** Read by `~` only, and absent from the C implementation's own query task. */
+	readonly title: string;
+}
+
+/**
+ * Whether a title satisfies a `~` term.
+ *
+ * Every word has to appear, in any order and in any position, so
+ * `~"support windows"` finds "Windows support" — typing the words in the wrong
+ * order otherwise would not. Case is ignored; nothing else is normalised,
+ * because titles are shown verbatim and a reader is matching what they see.
+ */
+export function matchesTitle(title: string, search: string): boolean {
+	const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+	if (words.length === 0) return true;
+
+	const haystack = title.toLowerCase();
+	return words.every((word) => haystack.includes(word));
 }
 
 export class TqlError extends Error {
 	readonly span: Span;
+	/** Printed above the diagnostic, where the CLI prints one. */
+	readonly help?: string;
 
-	constructor(message: string, span: Span) {
+	constructor(message: string, span: Span, help?: string) {
 		super(message);
 		this.name = 'TqlError';
 		this.span = span;
+		if (help !== undefined) this.help = help;
 	}
 }
+
+/**
+ * What `src/query.c` prints above this particular diagnostic, verbatim.
+ *
+ * Two primaries with nothing between them is the mistake a reader makes first —
+ * `~support not ~mac` instead of `~support and not ~mac` — and the answer to it
+ * is the list of things that could have gone in the gap, not the name of the
+ * token that could not.
+ */
+const INFIX_HELP = `Supported infix operators:
+
+    and  or                  - logical operators
+    lt  le  gt  ge  eq  ne   - comparison operators`;
 
 /** A parse that succeeded but used deprecated syntax. */
 export interface TqlWarning {
@@ -80,7 +127,8 @@ interface Token {
 /**
  * Splits a query into tokens. Brackets are single-character tokens; everything
  * else runs until a bracket or whitespace, which is why tags may not contain
- * either.
+ * either — except inside quotes, where a run of anything up to the closing
+ * quote belongs to the token, so `~"windows support"` stays one piece.
  */
 export function tokenize(source: string): Token[] {
 	const tokens: Token[] = [];
@@ -97,7 +145,17 @@ export function tokenize(source: string): Token[] {
 			continue;
 		}
 		const start = i;
-		while (i < source.length && !/[\s[\]]/.test(source[i])) i += 1;
+		while (i < source.length && !/[\s[\]]/.test(source[i])) {
+			if (source[i] === '"') {
+				i += 1;
+				while (i < source.length && source[i] !== '"') i += 1;
+				// Left unclosed at the end of the source, which the parser reports:
+				// an unterminated quote is the normal state halfway through typing.
+				if (i < source.length) i += 1;
+				continue;
+			}
+			i += 1;
+		}
 		tokens.push({ text: source.slice(start, i), span: { start, end: i } });
 	}
 
@@ -133,6 +191,22 @@ export function parseWithWarnings(source: string): ParseResult {
 			}
 			if (token.text.length === 1) throw new TqlError('Empty tag', token.span);
 			return { kind: 'tag', name: token.text.slice(1), span: token.span };
+		}
+
+		if (token.text.startsWith('~')) {
+			const rest = token.text.slice(1);
+			if (rest.length === 0) {
+				throw new TqlError('Expected a word or a quoted phrase after `~`', token.span);
+			}
+			if (!rest.startsWith('"')) {
+				return { kind: 'text', value: rest, span: token.span };
+			}
+			if (rest.length < 2 || !rest.endsWith('"')) {
+				throw new TqlError('Unterminated quote', token.span);
+			}
+			const phrase = rest.slice(1, -1);
+			if (phrase.trim().length === 0) throw new TqlError('Empty search', token.span);
+			return { kind: 'text', value: phrase, span: token.span };
 		}
 
 		if (token.text === '[') {
@@ -199,7 +273,11 @@ export function parseWithWarnings(source: string): ParseResult {
 
 	const trailing = peek();
 	if (trailing) {
-		throw new TqlError(`Unexpected token \`${trailing.text}\``, trailing.span);
+		throw new TqlError(
+			`Unexpected infix operator \`${trailing.text}\``,
+			trailing.span,
+			INFIX_HELP
+		);
 	}
 
 	return { node, warnings };
@@ -222,6 +300,8 @@ function evaluateNode(node: Node, task: TqlTask): Value {
 			return { type: 'boolean', value: task.tags.length > 0 };
 		case 'tag':
 			return { type: 'boolean', value: task.tags.includes(node.name) };
+		case 'text':
+			return { type: 'boolean', value: matchesTitle(task.title, node.value) };
 		case 'priority':
 			return { type: 'integer', value: task.priority };
 		case 'integer':
@@ -281,8 +361,13 @@ export function compile(source: string): (task: TqlTask) => boolean {
 /**
  * Renders an error the way the CLI does: the source, a caret under the offending
  * token, then the message.
+ *
+ * One caret, never a run of them under the whole token: `report_compile_query_
+ * diagnostic` prints `"%*s", cursor, "^"`, so the width only positions it. An
+ * underline would read better and is not what the reader sees in their terminal.
  */
 export function formatDiagnostic(source: string, error: TqlError): string {
-	const caret = ' '.repeat(error.span.start) + '^'.repeat(Math.max(1, error.span.end - error.span.start));
-	return `${source}\n${caret}\n${error.message}`;
+	const caret = `${' '.repeat(error.span.start)}^`;
+	const body = `${source}\n${caret}\n${error.message}`;
+	return error.help ? `${error.help}\n\n${body}` : body;
 }

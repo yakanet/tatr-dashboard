@@ -7,10 +7,15 @@ import {
 	parse,
 	parseWithWarnings,
 	tokenize,
+	matchesTitle,
 	type TqlTask
 } from './tql.ts';
 
-const task = (tags: string[], priority = 100): TqlTask => ({ tags, priority });
+const task = (tags: string[], priority = 100, title = 'A task'): TqlTask => ({
+	tags,
+	priority,
+	title
+});
 
 const bug = task(['bug'], 100);
 const bugUi = task(['bug', 'ui'], 30);
@@ -152,7 +157,7 @@ describe('errors', () => {
 	});
 
 	it('rejects a stray closing bracket', () => {
-		expect(fails(':a]')?.message).toContain('Unexpected token');
+		expect(fails(':a]')?.message).toContain('Unexpected infix operator');
 	});
 
 	it('rejects an unknown word', () => {
@@ -209,7 +214,7 @@ describe('formatDiagnostic', () => {
 			expect.unreachable('should have thrown');
 		} catch (error) {
 			expect(formatDiagnostic(source, error as TqlError)).toBe(
-				':a and nope\n       ^^^^\nUnknown token `nope`'
+				':a and nope\n       ^\nUnknown token `nope`'
 			);
 		}
 	});
@@ -224,5 +229,114 @@ describe('compile', () => {
 
 	it('throws at compile time, not per task', () => {
 		expect(() => compile(':a and')).toThrow(TqlError);
+	});
+});
+
+describe('matchesTitle', () => {
+	it('ignores case', () => {
+		expect(matchesTitle('Windows support', 'windows')).toBe(true);
+	});
+
+	it('matches inside a word', () => {
+		expect(matchesTitle('Windows support', 'ndows')).toBe(true);
+	});
+
+	it('wants every word, in any order', () => {
+		expect(matchesTitle('Windows support', 'support windows')).toBe(true);
+		expect(matchesTitle('Windows support', 'windows linux')).toBe(false);
+	});
+
+	it('ignores the spacing between words', () => {
+		expect(matchesTitle('Windows support', '  windows   support ')).toBe(true);
+	});
+});
+
+describe('the ~ term', () => {
+	const windows = task([], 100, 'Windows support');
+	const macos = task([], 100, 'MacOS support');
+	const run = (source: string, on: TqlTask) => compile(source)(on);
+
+	it('reads a bare word', () => {
+		expect(run('~windows', windows)).toBe(true);
+		expect(run('~windows', macos)).toBe(false);
+	});
+
+	it('reads a quoted phrase as one token, spaces and all', () => {
+		expect(tokenize('~"windows support"').map((t) => t.text)).toEqual(['~"windows support"']);
+		expect(run('~"support windows"', windows)).toBe(true);
+	});
+
+	it('composes like any other primary', () => {
+		expect(run('~windows or ~macos', macos)).toBe(true);
+		expect(run('not ~windows', macos)).toBe(true);
+		expect(run('[~windows or ~macos] and priority ge 100', windows)).toBe(true);
+	});
+
+	it('is a boolean, so a comparison rejects it', () => {
+		expect(() => run('priority eq ~x', windows)).toThrow(TqlError);
+	});
+
+	it('refuses a bare ~', () => {
+		expect(() => parse('~')).toThrow('Expected a word or a quoted phrase after `~`');
+	});
+
+	it('refuses an unterminated quote, which is how typing looks halfway', () => {
+		expect(() => parse('~"windows sup')).toThrow('Unterminated quote');
+		expect(() => parse('~"')).toThrow('Unterminated quote');
+	});
+
+	it('refuses a phrase with nothing in it', () => {
+		expect(() => parse('~"  "')).toThrow('Empty search');
+	});
+
+	it('leaves a quote alone where the language has no use for one', () => {
+		// Nothing in the C grammar spells a string, so this stays an unknown token
+		// rather than quietly becoming a search.
+		expect(() => parse('"windows"')).toThrow('Unknown token');
+	});
+});
+
+describe('two primaries with nothing between them', () => {
+	// The reference implementation answers this with the list of operators that
+	// could have filled the gap, above its usual caret. It also calls the token an
+	// infix operator, even for `not`, and the wording is ported as it stands.
+	it('names it the way the CLI does', () => {
+		expect(() => parse('~support not ~mac')).toThrow('Unexpected infix operator `not`');
+		expect(() => parse(':bug not :ui')).toThrow('Unexpected infix operator `not`');
+	});
+
+	it('carries the operator list into the rendered diagnostic', () => {
+		let error: unknown;
+		try {
+			parse(':bug not :ui');
+		} catch (thrown) {
+			error = thrown;
+		}
+		const rendered = formatDiagnostic(':bug not :ui', error as TqlError);
+		expect(rendered).toBe(
+			[
+				'Supported infix operators:',
+				'',
+				'    and  or                  - logical operators',
+				'    lt  le  gt  ge  eq  ne   - comparison operators',
+				'',
+				':bug not :ui',
+				'     ^',
+				'Unexpected infix operator `not`'
+			].join('\n')
+		);
+	});
+
+	it('leaves every other diagnostic without help', () => {
+		let error: unknown;
+		try {
+			parse('priority lt');
+		} catch (thrown) {
+			error = thrown;
+		}
+		expect((error as TqlError).help).toBeUndefined();
+		expect(formatDiagnostic('priority lt', error as TqlError)).toBe(
+			'priority lt\n           ^\nExpected an expression'
+		);
 	});
 });

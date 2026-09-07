@@ -40,8 +40,6 @@
 		const url = new URL(page.url.href);
 		if (query.text.trim()) url.searchParams.set('q', query.text.trim());
 		else url.searchParams.delete('q');
-		if (query.search.trim()) url.searchParams.set('text', query.search.trim());
-		else url.searchParams.delete('text');
 		if (query.showClosed) url.searchParams.set('closed', '1');
 		else url.searchParams.delete('closed');
 		replaceState(url, page.state);

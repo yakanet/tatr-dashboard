@@ -73,6 +73,11 @@ describe('complete', () => {
 		});
 	});
 
+	it('has nothing to say inside a search, where neither can appear', () => {
+		expect(complete('~b', 2, TAGS)).toBeNull();
+		expect(complete('~"windows su', 12, TAGS)).toBeNull();
+	});
+
 	it('has nothing to say off a token', () => {
 		expect(complete('not ', 4, TAGS)).toBeNull();
 		expect(complete('', 0, TAGS)).toBeNull();

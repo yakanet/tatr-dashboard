@@ -58,8 +58,8 @@ const KEYWORDS: readonly { value: string; detail: string }[] = [
 	{ value: 'ge', detail: 'greater than or equal to' }
 ];
 
-/** Characters a token can hold: tag punctuation, then the name itself. */
-const TOKEN = /[A-Za-z0-9_:.-]/;
+/** Characters a token can hold: sigils and punctuation, then the name itself. */
+const TOKEN = /[A-Za-z0-9_:.~"-]/;
 
 /** The token the caret sits in or just after, as a half-open range. */
 export function tokenAt(text: string, cursor: number): { start: number; end: number } {
@@ -79,11 +79,16 @@ export function tokenAt(text: string, cursor: number): { start: number; end: num
  * A token opening with `:` or `.` can only become a tag, so keywords are left
  * out entirely rather than ranked below — the reader has already said which
  * half of the vocabulary they want.
+ *
+ * A token opening with `~` is a search through titles, where neither a tag nor a
+ * keyword can appear. Nothing is offered there: a menu suggesting `:bug` into
+ * the middle of a phrase would be worse than no menu.
  */
 export function complete(text: string, cursor: number, tags: readonly TagOption[]): Completions | null {
 	const { start, end } = tokenAt(text, cursor);
 	const token = text.slice(start, cursor);
 	if (token.length === 0) return null;
+	if (token[0] === '~') return null;
 
 	const sigil = token[0] === ':' || token[0] === '.';
 	const needle = (sigil ? token.slice(1) : token).toLowerCase();

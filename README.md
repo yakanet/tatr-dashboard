@@ -55,12 +55,25 @@ your shell history, paste it in, get the same answer.
 | `priority ge 90` | what deserves attention |
 | `[:ui or :tql] and priority ge 90` | brackets group, so no shell quoting |
 | `tagged` | tasks carrying at least one tag |
+| `~"query language"` | titles holding every one of those words |
 | `any` | everything |
 
 Comparisons are spelled as words (`lt le gt ge eq ne`) and square brackets
 replace parentheses — that is how a query survives a shell without quoting. The
 parser is typed: `and`/`or`/`not` take booleans, comparisons take integers, and
 a mistake is pointed at *the offending token* instead of being silently coerced.
+Tag names and keywords complete as you type, with what each tag means alongside
+it — the repository's own vocabulary, which nothing else on screen lists.
+
+**One addition of our own: `~` searches titles**, and the CLI has no notion of
+it. The divergence is deliberate and it runs one way only — every query `tatr
+ls` accepts behaves identically here, but a query written with `~` will not run
+there. A reader in a browser has no `grep` sitting beside the tool, and the
+alternative was a second search box next to the language, which read as two
+unrelated ways to say one thing. `~` rather than a bare quoted string because
+the match is loose — every word, in any order, case ignored — and quotes promise
+a phrase everywhere else; with `~` carrying that meaning, quotes are left
+grouping words that contain spaces and nothing more.
 
 ![The filtered list](docs/list.jpg)
 
@@ -168,3 +181,5 @@ view, self-hosted webfonts, and forges beyond GitHub.
 
 The format, the CLI and the query language are [tsoding's](https://github.com/tsoding/tatr).
 This is a reader for them, nothing more.
+
+MIT licensed — see [LICENSE](LICENSE).

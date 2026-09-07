@@ -24,36 +24,10 @@ export const QUERY = Symbol('query');
  * sides before testing either, exactly as the C implementation does. No branch
  * can hide behind a short circuit that never happens.
  */
-const WITNESS: TqlTask = { tags: [], priority: 0 };
-
-/**
- * Whether a title matches a plain-text filter.
- *
- * Every word has to appear, in any order and in any position, so "support
- * windows" finds "Windows support" — which typing the words in the wrong order
- * otherwise would not. Case is ignored; nothing else is normalised, because the
- * titles this reads are shown verbatim and a reader is matching what they see.
- */
-export function matchesTitle(title: string, search: string): boolean {
-	const words = search.toLowerCase().split(/\s+/).filter(Boolean);
-	if (words.length === 0) return true;
-
-	const haystack = title.toLowerCase();
-	return words.every((word) => haystack.includes(word));
-}
+const WITNESS: TqlTask = { tags: [], priority: 0, title: '' };
 
 export class QueryState {
 	text = $state('');
-	/**
-	 * A plain-text filter on titles, kept out of the query language on purpose.
-	 *
-	 * TQL sees a task's tags and priority and nothing else, exactly as the CLI's
-	 * does, and a query copied from a shell has to keep working here. Growing an
-	 * operator for text would break that in one direction — ours would no longer
-	 * run there — so text filtering sits beside the language rather than inside
-	 * it, and the two combine with an implicit `and`.
-	 */
-	search = $state('');
 	/** `tatr ls` hides closed tasks unless asked; so does this. */
 	showClosed = $state(false);
 
@@ -85,15 +59,10 @@ export class QueryState {
 		return this.#compiled.warnings;
 	}
 
-	/** Applies both filters to a set of tasks, honouring the closed toggle. */
+	/** Applies the query to a set of tasks, honouring the closed toggle. */
 	apply(tasks: Task[]): Task[] {
 		const pool = this.showClosed ? tasks : tasks.filter((task) => !task.closed);
-		const found = this.#compiled.error
-			? pool
-			: pool.filter((task) => this.#compiled.match(task));
-
-		const search = this.search.trim();
-		return search === '' ? found : found.filter((task) => matchesTitle(task.title, search));
+		return this.#compiled.error ? pool : pool.filter((task) => this.#compiled.match(task));
 	}
 
 	/** Adds a term, or removes it when it is already the whole query. */

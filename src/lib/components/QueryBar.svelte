@@ -141,7 +141,9 @@
 				<!-- The grammar is small enough to print in full, which saves the
 				     reader guessing that comparisons are words and groups are
 				     brackets. -->
-				<p class="grammar mono">priority lt 50 &nbsp; not tagged &nbsp; [ a or b ] &nbsp; any</p>
+				<p class="grammar mono">
+					~word &nbsp; priority lt 50 &nbsp; not tagged &nbsp; [ a or b ]
+				</p>
 				<!-- Said out loud, because a menu that answers the keyboard and never
 				     says so is a menu people reach for with the mouse. -->
 				<p class="keys">
@@ -153,21 +155,6 @@
 			</div>
 		{/if}
 	</div>
-	<!-- Beside the language rather than inside it: TQL stays exactly what the CLI
-	     accepts, and finding a task by a word in its title needs no syntax. -->
-	<label class="find">
-		<span class="glyph" aria-hidden="true">⌕</span>
-		<input
-			bind:value={query.search}
-			oninput={() => onchange?.()}
-			placeholder="filter titles"
-			spellcheck="false"
-			autocapitalize="off"
-			autocorrect="off"
-			autocomplete="off"
-			aria-label="Filter titles"
-		/>
-	</label>
 	<span class="count"><strong>{matched}</strong> matched <span class="of">/ {pool} shown</span></span>
 	<label class="closed">
 		<input type="checkbox" bind:checked={query.showClosed} onchange={onchange} />
@@ -324,34 +311,6 @@
 
 	.mono {
 		font-family: var(--font-mono);
-	}
-
-	.find {
-		display: flex;
-		align-items: baseline;
-		gap: 0.35rem;
-		flex-shrink: 0;
-		padding-left: 0.75rem;
-		border-left: 1px solid var(--border);
-	}
-
-	.glyph {
-		font-size: 0.9rem;
-		color: var(--muted);
-	}
-
-	.find input {
-		width: 9rem;
-		font: inherit;
-		font-size: 0.8rem;
-		color: inherit;
-		background: none;
-		border: none;
-		outline: none;
-	}
-
-	.find input::placeholder {
-		color: var(--muted);
 	}
 
 	.count {
