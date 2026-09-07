@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { formatRepoPath } from '#lib/repo/ref.ts';
+	import { blobUrl } from '#lib/sources/github.ts';
 	import {
 		renderInline,
 		renderMarkdown,
@@ -63,6 +64,15 @@
 	);
 	const incoming = $derived(repo.tasks.filter((other) => other.references.includes(id)));
 	const mutual = $derived(new Set(incoming.map((other) => other.id)));
+
+	/**
+	 * The file this page is a reading of, on the forge.
+	 *
+	 * Where a reader goes for the history, the blame and the raw markdown, none
+	 * of which this viewer computes: the format holds no modification date, and
+	 * asking the API for one costs a request per task.
+	 */
+	const fileUrl = $derived(blobUrl(ref, repo.branch, `tasks/${id}/TASK.md`));
 
 	const listHref = $derived(resolve('/[...repo]/list', { repo: formatRepoPath(ref) }));
 	const taskHref = (other: string) =>
@@ -186,6 +196,14 @@
 					<p class="note">In the task's folder, beside its <code>TASK.md</code>.</p>
 				</section>
 			{/if}
+
+			<section class="panel">
+				<h2>Source</h2>
+				<p class="file">
+					<a href={fileUrl} target="_blank" rel="noopener noreferrer">TASK.md on {ref.host}</a>
+				</p>
+				<p class="note">Its history and its blame are there, not here.</p>
+			</section>
 
 			<p><a href={listHref}>← Back to the list</a></p>
 		</aside>
@@ -443,6 +461,15 @@
 	.direction {
 		font-size: 0.7rem !important;
 		color: var(--muted) !important;
+	}
+
+	.file {
+		margin: 0;
+		font-size: 0.85rem;
+	}
+
+	.file a {
+		color: var(--accent-text);
 	}
 
 	.note {

@@ -101,8 +101,33 @@ export const github: Provider = {
 	}
 };
 
+/**
+ * Encodes a path one segment at a time, so the slashes between them survive.
+ *
+ * Branches take the same treatment as paths, and for the same reason: a URL
+ * carries `feature/web-ui` as two segments, and `feature%2Fweb-ui` is a branch
+ * of that literal name, which no repository has.
+ */
+const encodePath = (path: string) => path.split('/').map(encodeURIComponent).join('/');
+
 /** URL of a file's raw contents. Free of the API budget. */
 export function rawUrl(ref: RepoRef, branch: string, path: string): string {
-	const segments = path.split('/').map(encodeURIComponent).join('/');
-	return `${RAW}/${ref.owner}/${ref.name}/${encodeURIComponent(branch)}/${segments}`;
+	return `${RAW}/${ref.owner}/${ref.name}/${encodePath(branch)}/${encodePath(path)}`;
+}
+
+/**
+ * A file's page on the forge, where its history and its blame are.
+ *
+ * This viewer computes no history, and the link is how it gets away with that:
+ * the format holds no modification date, and dating tasks through the API costs
+ * one request per task against sixty an hour. The forge renders history better
+ * than we would anyway, so a reader who wants it is handed over rather than
+ * served a guess.
+ *
+ * `ref.host` rather than a constant, this being the one URL that genuinely
+ * lives on the forge's own domain. The path shape is still GitHub's — GitLab
+ * spells it `/-/blob/` — which is 20260906-211255's problem, not this one's.
+ */
+export function blobUrl(ref: RepoRef, branch: string, path: string): string {
+	return `https://${ref.host}/${ref.owner}/${ref.name}/blob/${encodePath(branch)}/${encodePath(path)}`;
 }
