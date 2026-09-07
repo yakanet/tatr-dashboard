@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import cliCases from '../../tests/fixtures/tql-cli-cases.json' with { type: 'json' };
-import tasks from '../../tests/fixtures/tsoding-tatr.json' with { type: 'json' };
-import { compile } from './tql.ts';
+import cliCases from '../../../tests/fixtures/tql-cli-cases.json' with { type: 'json' };
+import tasks from '../../../tests/fixtures/tsoding-tatr.json' with { type: 'json' };
+import { compile } from './query.ts';
 
 /**
  * Differential test against the reference implementation.

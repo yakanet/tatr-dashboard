@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { formatDiagnostic } from '#lib/tql.ts';
-	import { apply, complete, type TagOption } from '#lib/tql-complete.ts';
+	import { formatDiagnostic } from '#lib/tql/query.ts';
+	import { apply, complete, type TagOption } from '#lib/tql/complete.ts';
 	import type { QueryState } from '#lib/state/query.svelte.ts';
 
 	let {

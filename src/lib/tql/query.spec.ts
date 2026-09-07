@@ -9,7 +9,7 @@ import {
 	tokenize,
 	matchesTitle,
 	type TqlTask
-} from './tql.ts';
+} from './query.ts';
 
 const task = (tags: string[], priority = 100, title = 'A task'): TqlTask => ({
 	tags,

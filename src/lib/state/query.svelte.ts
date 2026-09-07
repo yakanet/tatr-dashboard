@@ -6,7 +6,7 @@
  * the counts and the other charts at once. Keeping it in the URL means a
  * filtered view is a link someone can send.
  */
-import { compile, parseWithWarnings, TqlError, type TqlWarning } from '../tql.ts';
+import { compile, parseWithWarnings, TqlError, type TqlWarning } from '../tql/query.ts';
 import type { Task } from '../tatr/task.ts';
 
 export const QUERY = Symbol('query');

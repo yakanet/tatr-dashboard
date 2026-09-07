@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import cliErrors from '../../tests/fixtures/tatr-query-errors.json' with { type: 'json' };
-import { compile, formatDiagnostic, parseWithWarnings, TqlError } from './tql.ts';
+import cliErrors from '../../../tests/fixtures/tatr-query-errors.json' with { type: 'json' };
+import { compile, formatDiagnostic, parseWithWarnings, TqlError } from './query.ts';
 
 /**
  * Differential test of the diagnostics, the counterpart to
@@ -40,7 +40,7 @@ const unprefixed = (stderr: string) => stderr.replace(/^(ERROR|WARNING): /m, '')
 
 /**
  * The primary list gains two `~` lines, the honest consequence of adding the
- * primary — see the divergence noted in `tql.ts`. Dropping them here compares
+ * primary — see the divergence noted in `query.ts`. Dropping them here compares
  * everything else exactly.
  */
 const withoutTilde = (rendered: string) =>

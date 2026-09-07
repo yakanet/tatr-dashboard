@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apply, complete, tokenAt, type TagOption } from './tql-complete.ts';
+import { apply, complete, tokenAt, type TagOption } from './complete.ts';
 
 const TAGS: TagOption[] = [
 	{ name: 'bug', description: 'something is broken', count: 9 },
