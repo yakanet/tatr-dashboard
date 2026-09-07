@@ -42,6 +42,15 @@ export class RepositoryState {
 	storedAt = $state(0);
 	branch = $state('HEAD');
 	failure = $state<Failure | null>(null);
+	/**
+	 * A refresh that could not be taken, over a reading that stands.
+	 *
+	 * Separate from `failure` because they say opposite things: that one means
+	 * there is nothing to show, this one means what is on screen is the last
+	 * reading and still true. A spent budget is the ordinary way here, and
+	 * trading a good reading for an error page would punish pressing Refresh.
+	 */
+	refreshFailure = $state<Failure | null>(null);
 	/** The state the reader last saw, when this reading replaced one. */
 	previous = $state<Snapshot | null>(null);
 
@@ -80,9 +89,15 @@ export class RepositoryState {
 		const controller = new AbortController();
 		this.#controller = controller;
 
+		// Only a refresh over a reading has something to protect: from `failed`, or
+		// from another repository, there is nothing on screen worth keeping.
+		const standing = refresh && this.phase === 'ready';
+		const held = this.previous;
+
 		this.ref = ref;
 		this.phase = 'listing';
 		this.failure = null;
+		this.refreshFailure = null;
 		this.done = 0;
 		this.total = 0;
 		// A comparison belongs to the reading that produced it. One state serves
@@ -116,6 +131,15 @@ export class RepositoryState {
 			this.phase = 'ready';
 		} catch (error) {
 			if (controller.signal.aborted) return;
+			if (standing) {
+				// The comparison goes back with the reading it belongs to: the tasks
+				// were never replaced, so its badges would otherwise vanish for a
+				// reason the reader has no way to see.
+				this.previous = held;
+				this.refreshFailure = describe(error);
+				this.phase = 'ready';
+				return;
+			}
 			this.failure = describe(error);
 			this.phase = 'failed';
 		}

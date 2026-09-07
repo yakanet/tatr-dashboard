@@ -114,10 +114,16 @@ behind the same IP address, so:
 - **Contents come from a CDN.** `raw.githubusercontent.com` does not count
   against the API quota at all.
 - **Hitting the limit anyway is not the end.** The page falls back to two
-  mirrors rather than showing you an error, and says so when the copy it found
-  may be behind.
+  mirrors — `ungh.cc`, which proxies the API with its own credentials, then
+  jsDelivr, which serves a cached copy — rather than showing you an error, and
+  says so when what it found may be behind. Those two are the only requests
+  this site makes to anyone but GitHub, they carry nothing but the repository
+  name, and they happen only when the budget is already spent.
+- **A refresh that fails costs you nothing.** The reading you were looking at
+  stays on screen and the header says it was not renewed, rather than trading a
+  true copy for an error page.
 
-The only third-party request left anywhere is the webfont stylesheet, and
+Beyond those, the only third-party request is the webfont stylesheet, and
 bringing it in-house is
 [task `20260906-211248`](https://github.broutin.dev/tatr-dashboard/yakanet/tatr-dashboard/task/20260906-211248).
 

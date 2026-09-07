@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { describeAge, RepositoryState } from './repository.svelte.ts';
 import { snapshot } from '../tatr/changes.ts';
+import { localRef } from '../repo/ref.ts';
+import { fromFileList } from '../sources/local/folder.ts';
+import { closeFolder, openFolder } from '../sources/local/session.ts';
 import { readTask, type Task } from '../tatr/task.ts';
 
 /**
@@ -59,5 +62,82 @@ describe('what moved since the last reading', () => {
 		expect(changes?.total).toBe(1);
 		expect(changes?.since).toBe(5_000);
 		expect(changes?.moved.get('20260101-000001')).toEqual(['closed']);
+	});
+});
+
+/**
+ * A refresh over a real source, and a real failure: an open folder whose grant
+ * is gone, which is what every reload of a local repository produces. No mock
+ * stands in for `loadRepository` — the point being what the state does when the
+ * loader throws, and a source that can genuinely throw is already here.
+ */
+describe('a refresh that fails', () => {
+	const file = (path: string, text: string) => {
+		const one = new File([text], path.split('/').pop()!);
+		Object.defineProperty(one, 'webkitRelativePath', { value: `my-project/${path}` });
+		return one;
+	};
+
+	const task = (id: string, priority: number) =>
+		file(`tasks/${id}/TASK.md`, `# ${id}\n\n- STATUS: OPEN\n- PRIORITY: ${priority}\n`);
+
+	const opened = () => {
+		const folder = fromFileList([task('20260101-000001', 90)]);
+		if (folder) openFolder(folder);
+		return localRef();
+	};
+
+	afterEach(() => closeFolder());
+
+	it('keeps the reading on screen and says only that it was not renewed', async () => {
+		const repo = new RepositoryState();
+		const ref = opened();
+		await repo.load(ref);
+		expect(repo.phase).toBe('ready');
+
+		// The browser takes a folder's grant back on a reload; a spent API budget
+		// arrives at the same place from the other source.
+		closeFolder();
+		await repo.load(ref, true);
+
+		expect(repo.phase).toBe('ready');
+		expect(repo.tasks.map((one) => one.id)).toEqual(['20260101-000001']);
+		expect(repo.refreshFailure?.kind).toBe('no-source');
+		expect(repo.failure).toBeNull();
+	});
+
+	it('is fatal when there is no reading to keep', async () => {
+		const repo = new RepositoryState();
+		await repo.load(localRef(), true);
+		expect(repo.phase).toBe('failed');
+		expect(repo.failure?.kind).toBe('no-source');
+		expect(repo.refreshFailure).toBeNull();
+	});
+
+	it('gives the comparison back with the reading it belongs to', async () => {
+		const repo = new RepositoryState();
+		const ref = opened();
+		await repo.load(ref);
+		repo.previous = snapshot([make('20260101-000001', 50)], 5_000);
+
+		closeFolder();
+		await repo.load(ref, true);
+
+		// Same tasks on screen, so the badges that explain them stay too.
+		expect(repo.changes?.total).toBe(1);
+	});
+
+	it('is cleared by the refresh that works', async () => {
+		const repo = new RepositoryState();
+		const ref = opened();
+		await repo.load(ref);
+		closeFolder();
+		await repo.load(ref, true);
+		expect(repo.refreshFailure).not.toBeNull();
+
+		opened();
+		await repo.load(ref, true);
+		expect(repo.refreshFailure).toBeNull();
+		expect(repo.phase).toBe('ready');
 	});
 });

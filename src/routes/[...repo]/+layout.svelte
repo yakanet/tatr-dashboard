@@ -112,6 +112,11 @@
 			{repo.fromCache ? 'cached' : 'read'}
 			{describeAge(repo.storedAt)}
 			{#if repo.mayBeStale}<span class="stale">· {repo.source} may be behind</span>{/if}
+			<!-- The reading stayed; only renewing it failed, which is worth one
+			     clause rather than a panel over tasks that are still true. -->
+			{#if repo.refreshFailure}
+				<span class="stale">· not refreshed: {repo.refreshFailure.message}</span>
+			{/if}
 		</span>
 		{#if repeatable}
 			<button onclick={() => repo.load(ref, true)}>Refresh</button>

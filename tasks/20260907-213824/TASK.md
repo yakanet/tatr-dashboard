@@ -1,0 +1,49 @@
+# A failed refresh keeps the reading it could not replace
+
+- STATUS: CLOSED
+- PRIORITY: 50
+- TAGS: ui,data
+
+Found by asking a different question: with everything cached in IndexedDB, are
+ungh and jsDelivr still needed? They are, and for a reason that turned out to be
+half a defect.
+
+The cache serves a repository already read; the mirrors serve one that has not
+been. Two cases where the cache has nothing to offer:
+
+- **A first visit with the budget already spent.** GitHub's sixty an hour are
+  shared per IP address, so a reader behind a corporate NAT can arrive at zero
+  without ever having opened this site. No cache entry, no token, no server —
+  without a mirror, an error and nothing to do about it.
+- **A refresh with the budget spent**, which is where the defect was: a failed
+  load set `phase = 'failed'`, so the reading on screen was replaced by the
+  failure panel. Pressing Refresh could therefore *cost* a reader the copy they
+  were reading.
+
+The second is now fixed rather than covered by a mirror. `refreshFailure` sits
+beside `failure` and says the opposite thing: that one means there is nothing to
+show, this one means what is on screen is the last reading and still true. The
+header prints one clause — `not refreshed: GitHub API rate limit reached` —
+where a panel used to take the page.
+
+The comparison goes back with the reading it belongs to. `previous` is cleared
+before every load on purpose, so that moving to another repository cannot
+announce the last one's news; a kept reading has to put it back, or its badges
+vanish for a reason the reader has no way to see.
+
+Tested against a real source rather than a mocked loader, which this project had
+no pattern for: an open folder whose grant is gone throws exactly as a spent
+budget does, and that is what every reload of a local repository produces. Four
+tests, each proved to bite — never keeping the reading fails three, dropping the
+comparison fails one, and keeping *every* failure fails the one that pins a
+first load still being fatal.
+
+The README was wrong about this and is now precise. It claimed the webfont
+stylesheet was "the only third-party request left anywhere", fifteen lines after
+announcing a fallback to two mirrors. Both mirrors are now named, with what they
+carry (a repository name) and when they are asked (only once the budget is
+spent).
+
+What is left for whoever revisits it: jsDelivr's remaining job is a first visit,
+budget spent, with ungh also down — and it serves a copy measured at 63 tasks of
+64. Worth rejudging against 53 lines and one third party, but not today.
