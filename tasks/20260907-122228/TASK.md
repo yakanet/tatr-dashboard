@@ -1,6 +1,6 @@
 # Open a folder on this machine as a repository
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 60
 - TAGS: data,ui
 
@@ -187,15 +187,28 @@ the same `$derived` line in five page scripts and a sixth in the header. The
 state knows what it read and what it is reading; a view should not work it out
 again.
 
-Still open before this is worth merging:
+---
 
-- **The picker itself has still never been clicked.** The input path has now
-  been used on this repository and read all 32 tasks; `showDirectoryPicker`
-  needs a browser that exposes it and a human gesture.
-- **Nothing persists between visits.** The handle is structured-clonable and
-  `isSameEntry` works, both checked while studying this, so the folder could be
-  remembered and re-granted with one click. Not built.
-- **What moved since the last reading is always empty** for a folder, since it
-  is the cache that carries the previous state. It would want its own snapshot.
-- **No drag and drop.** `webkitGetAsEntry` is supported and would suit dropping
-  a folder on the homepage.
+Merged and in production, and used on three browsers by three different doors
+before this was closed:
+
+- **Brave** picked the whole checkout through the directory input, which is what
+  produced the file-count dialog and, with it, the acceptance of a `tasks/`
+  folder.
+- **Firefox** read `tsoding/tatr` from the disk on the deployed site: 64 tasks,
+  41 closed, the months chart with its five empty months — the reference
+  repository shown without a single network request.
+- **Chrome** exposes the picker, and that is the one path still never taken by a
+  human hand: it needs a click, and every real use so far landed on the input.
+  It is exercised by the tests and by the same walk the origin-private file
+  system drove during the study, which is not the same as having been used.
+
+Firefox picking `tasks/` also showed the cost of that shortcut plainly: the
+header reads `tasks`, because `webkitRelativePath` starts at the folder that was
+picked and the parent's name is not knowable from it. Honest, and unhelpful. The
+repository name is simply not available on that path.
+
+What was left undone is now recorded rather than carried here: dropping a folder
+is 20260907-143334 and remembering one between visits is 20260907-150656 —
+which, if it happens, is also what would let a local source answer 20260907-040703
+about what moved.
