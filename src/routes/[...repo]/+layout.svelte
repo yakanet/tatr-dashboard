@@ -120,7 +120,8 @@
 
 	.brand {
 		display: flex;
-		align-items: center;
+		/* The word, not the mark, is what the row aligns on: see Mark's own note. */
+		align-items: baseline;
 		gap: 0.4rem;
 		font-weight: 600;
 		color: var(--fg);
