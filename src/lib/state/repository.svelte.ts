@@ -8,6 +8,7 @@
 import { loadRepository, NoTasksFolderError } from '../sources/load.ts';
 import { ProviderError, type ProviderFailure } from '../sources/provider.ts';
 import type { RepoRef } from '../repo/ref.ts';
+import { compare, type Changes, type Movement, type Snapshot } from '../tatr/changes.ts';
 import type { Task } from '../tatr/task.ts';
 import type { TagDescriptions } from '../tatr/tags-file.ts';
 
@@ -36,11 +37,28 @@ export class RepositoryState {
 	storedAt = $state(0);
 	branch = $state('HEAD');
 	failure = $state<Failure | null>(null);
+	/** The state the reader last saw, when this reading replaced one. */
+	previous = $state<Snapshot | null>(null);
 
 	#controller: AbortController | null = null;
 
 	readonly open = $derived(this.tasks.filter((task) => !task.closed));
 	readonly closed = $derived(this.tasks.filter((task) => task.closed));
+
+	/**
+	 * What moved since the reader's last reading, or null when there is nothing
+	 * to say — a first visit, or an unchanged repository.
+	 *
+	 * Null rather than an empty result, so a view has one thing to test and
+	 * cannot mark a row for having done nothing. It stands as long as the
+	 * reading does: there is no dismissing it, because the next refresh is a new
+	 * reading and takes the comparison with it.
+	 */
+	readonly changes = $derived.by((): Changes | null => {
+		if (!this.previous) return null;
+		const changes = compare(this.previous, this.tasks);
+		return changes.total > 0 ? changes : null;
+	});
 
 	/** Loads a repository. Pass `refresh` to spend quota and get a fresh view. */
 	async load(ref: RepoRef, refresh = false): Promise<void> {
@@ -52,6 +70,10 @@ export class RepositoryState {
 		this.failure = null;
 		this.done = 0;
 		this.total = 0;
+		// A comparison belongs to the reading that produced it. One state serves
+		// every view, so without this a move to another repository would announce
+		// the last one's news over the new one's tasks.
+		this.previous = null;
 
 		try {
 			const result = await loadRepository(ref, {
@@ -74,12 +96,18 @@ export class RepositoryState {
 			this.fromCache = result.fromCache;
 			this.storedAt = result.storedAt;
 			this.branch = result.branch;
+			this.previous = result.previous;
 			this.phase = 'ready';
 		} catch (error) {
 			if (controller.signal.aborted) return;
 			this.failure = describe(error);
 			this.phase = 'failed';
 		}
+	}
+
+	/** What a marked row says on hover: how it moved, and since when. */
+	describeMoves(moves: Movement[]): string {
+		return `${moves.join(', ')} since your reading ${describeAge(this.previous?.at ?? 0)}`;
 	}
 
 	abort(): void {

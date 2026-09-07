@@ -325,3 +325,100 @@ describe('what the cache keeps', () => {
 		expect(await loadTaskDescription(ref, 'HEAD', 'nope', { fetchImpl: fetchFixture })).toBeNull();
 	});
 });
+
+/**
+ * A repository of a few task files that can be rewritten between readings —
+ * which the 64-task fixture cannot be, being a fixture.
+ */
+function mutable(files: Record<string, string>) {
+	const provider: Provider = {
+		name: 'github',
+		list: async () => ({
+			entries: Object.keys(files).map((id) => ({ path: `tasks/${id}/TASK.md`, size: 1 })),
+			source: 'github',
+			mayBeStale: false,
+			branch: 'HEAD'
+		})
+	};
+	const fetchImpl = (async (input: RequestInfo | URL) => {
+		const match = /tasks\/([^/]+)\/TASK\.md$/.exec(String(input));
+		return match && files[match[1]]
+			? new Response(files[match[1]], { status: 200 })
+			: new Response('not found', { status: 404 });
+	}) as unknown as typeof fetch;
+	return { provider, fetchImpl };
+}
+
+const file = (priority: number, tags: string, status = 'OPEN') =>
+	`# a task\n\n- STATUS: ${status}\n- PRIORITY: ${priority}\n- TAGS: ${tags}\n`;
+
+describe('what the reader last saw', () => {
+	const a = '20260101-000001';
+	const b = '20260202-000002';
+
+	it('has nothing behind a first visit', async () => {
+		const { provider, fetchImpl } = mutable({ [a]: file(90, 'ui') });
+		const first = await loadRepository(ref, { providers: [provider], fetchImpl, store });
+		expect(first.previous).toBeNull();
+	});
+
+	it('carries the previous reading through a refresh, with its age', async () => {
+		const files = { [a]: file(90, 'ui'), [b]: file(50, '') };
+		const { provider, fetchImpl } = mutable(files);
+		const options = { providers: [provider], fetchImpl, store };
+
+		await loadRepository(ref, { ...options, now: () => 1_000 });
+		files[a] = file(90, 'ui', 'CLOSED');
+		const refreshed = await loadRepository(ref, { ...options, refresh: true, now: () => 2_000 });
+
+		expect(refreshed.previous?.at).toBe(1_000);
+		expect(refreshed.previous?.tasks).toEqual([
+			{ id: a, closed: false, priority: 90, tags: ['ui'] },
+			{ id: b, closed: false, priority: 50, tags: [] }
+		]);
+		expect(refreshed.storedAt).toBe(2_000);
+	});
+
+	it('still carries it on the next visit, so the news survives a reload', async () => {
+		const files = { [a]: file(90, 'ui') };
+		const { provider, fetchImpl } = mutable(files);
+		const options = { providers: [provider], fetchImpl, store };
+
+		await loadRepository(ref, { ...options, now: () => 1_000 });
+		files[a] = file(110, 'ui');
+		await loadRepository(ref, { ...options, refresh: true, now: () => 2_000 });
+
+		const revisited = await loadRepository(ref, options);
+		expect(revisited.fromCache).toBe(true);
+		expect(revisited.previous?.tasks[0].priority).toBe(90);
+	});
+
+	it('replaces it on the next refresh rather than accumulating readings', async () => {
+		const files = { [a]: file(90, 'ui') };
+		const { provider, fetchImpl } = mutable(files);
+		const options = { providers: [provider], fetchImpl, store };
+
+		await loadRepository(ref, { ...options, now: () => 1_000 });
+		files[a] = file(100, 'ui');
+		await loadRepository(ref, { ...options, refresh: true, now: () => 2_000 });
+		files[a] = file(110, 'ui');
+		const third = await loadRepository(ref, { ...options, refresh: true, now: () => 3_000 });
+
+		// "Since your last read" is the last one, not the first.
+		expect(third.previous?.at).toBe(2_000);
+		expect(third.previous?.tasks[0].priority).toBe(100);
+	});
+
+	it('says nothing at all when a refresh brought nothing', async () => {
+		// The comparison is still taken and stored — it is the reading that moved
+		// on — so what a view gets is a snapshot identical to the tasks, which
+		// compares to no movement.
+		const files = { [a]: file(90, 'ui') };
+		const { provider, fetchImpl } = mutable(files);
+		const options = { providers: [provider], fetchImpl, store };
+
+		await loadRepository(ref, { ...options, now: () => 1_000 });
+		const again = await loadRepository(ref, { ...options, refresh: true, now: () => 2_000 });
+		expect(again.previous?.tasks).toEqual([{ id: a, closed: false, priority: 90, tags: ['ui'] }]);
+	});
+});

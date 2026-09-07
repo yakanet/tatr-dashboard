@@ -17,6 +17,7 @@
  * time and kept, so dropping the prose costs no feature.
  */
 import { collectAttachments } from '../tatr/attachments.ts';
+import { snapshot, type Snapshot } from '../tatr/changes.ts';
 import { readTask, type Task } from '../tatr/task.ts';
 import { parseTaskMd } from '../tatr/task-md.ts';
 import { parseTagsFile, type TagDescriptions } from '../tatr/tags-file.ts';
@@ -58,6 +59,13 @@ export interface LoadResult {
 	/** When this view of the repository was fetched, in epoch milliseconds. */
 	storedAt: number;
 	branch: string;
+	/**
+	 * The state the reader last saw, when this reading replaced one — so a
+	 * refresh can say what moved. Null on a first visit, and replaced rather
+	 * than cleared: a comparison lasts exactly as long as the reading it came
+	 * with.
+	 */
+	previous: Snapshot | null;
 }
 
 export class NoTasksFolderError extends Error {
@@ -116,8 +124,20 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 	if (!options.refresh) {
 		const cached = await store.read<CachedLoad>(key);
 		// IndexedDB stores structured clones, so Date and Map come back intact.
-		if (cached) return { ...cached.value, fromCache: true, storedAt: cached.storedAt };
+		if (cached) {
+			return {
+				...cached.value,
+				// A record written before this field existed simply has nothing behind it.
+				previous: cached.value.previous ?? null,
+				fromCache: true,
+				storedAt: cached.storedAt
+			};
+		}
 	}
+
+	// What the reader last saw, read before the write that loses it. Only a
+	// refresh has anything behind it: a first visit is not a comparison.
+	const seen = options.refresh ? await store.read<CachedLoad>(key) : null;
 
 	const doFetch = options.fetchImpl ?? fetch;
 	const listing = await listRepository(ref, options);
@@ -180,7 +200,8 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 		tags,
 		source: listing.source,
 		mayBeStale: listing.mayBeStale,
-		branch: listing.branch
+		branch: listing.branch,
+		previous: seen ? snapshot(seen.value.tasks, seen.storedAt) : null
 	};
 	await store.write(key, { ...payload, tasks: withoutDescriptions(tasks) }, storedAt);
 

@@ -82,7 +82,8 @@
 				</thead>
 				<tbody>
 					{#each visible as task (task.id)}
-						<tr>
+						{@const moves = repo.changes?.moved.get(task.id)}
+						<tr title={moves && repo.describeMoves(moves)}>
 							<td class="c-status">
 								{#if task.closed}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -95,7 +96,10 @@
 								{/if}
 							</td>
 							<td class="c-prio"><span class="prio">{task.priority}</span></td>
-							<td class="title"><a href={taskHref(task.id)} data-key-row>{@html inline(task)}</a></td>
+							<td class="title">
+								<a href={taskHref(task.id)} data-key-row>{@html inline(task)}</a>
+								{#if moves}<span data-moved>{moves[0]}</span>{/if}
+							</td>
 							<td class="c-tags">
 								{#each task.tags as tag (tag)}
 									<button class="tag" onclick={() => toggleTag(tag)} title={describe(task)}>

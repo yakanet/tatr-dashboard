@@ -84,6 +84,7 @@
 					{:else}
 						<ul>
 							{#each column.tasks as task (task.id)}
+								{@const moves = repo.changes?.moved.get(task.id)}
 								<li>
 									<!-- The card is the link, so `j`/`k` and Enter carry the board
 									     without a line of its own. -->
@@ -91,7 +92,12 @@
 										<span class="prio mono" class:muted={column.key === 'done'}>
 											{task.priority}
 										</span>
-										<span class="title">{@html inline(task)}</span>
+										<span class="title">
+											{@html inline(task)}
+											{#if moves}
+												<span data-moved title={repo.describeMoves(moves)}>{moves[0]}</span>
+											{/if}
+										</span>
 										{#if task.tags.length > 0}
 											<span class="tags">
 												{#each task.tags as tag (tag)}

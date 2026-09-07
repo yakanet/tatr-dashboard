@@ -194,6 +194,24 @@ tr [data-key-row][data-key-focus] {
 	outline: none;
 }
 
+/* How a row says it moved since the reader's last reading, in the list and on
+   the board's cards alike — one word, beside the title it belongs to.
+
+   Not a band on the row: that already means "the keyboard is here", and two
+   meanings on one channel is one too many. Here rather than in each view for the
+   same reason as the rules above, one convention being one rule. */
+[data-moved] {
+	margin-left: 0.5rem;
+	padding: 0.05rem 0.3rem;
+	font-size: 0.7rem;
+	font-weight: 500;
+	color: var(--accent-text);
+	background: var(--accent-wash);
+	border: 1px solid var(--accent-line);
+	border-radius: 0.2rem;
+	white-space: nowrap;
+}
+
 /* An SVG node draws its own focus, on the circle rather than around the link. */
 svg a[data-key-focus] circle {
 	stroke: var(--accent-text);
