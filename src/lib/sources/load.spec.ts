@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import rawTasks from '../../../tests/fixtures/tsoding-tatr-raw.json' with { type: 'json' };
 import { parseRepoPath } from '../repo/ref.ts';
 import { memoryStore } from './store.ts';
-import { NoFolderError, NoTasksFolderError, loadRepository, listRepository } from './load.ts';
+import { NoTasksFolderError, loadRepository } from './load.ts';
+import { NoSourceError } from './source.ts';
+import { listRepository } from './github.ts';
 import { closeFolder, fromFileList, openFolder } from './local.ts';
 import { localRef } from '../repo/ref.ts';
 import { ProviderError, type Listing, type Provider } from './provider.ts';
@@ -495,7 +497,7 @@ describe('a folder on this machine', () => {
 
 	it('says so when there is no folder open at all, as after a reload', async () => {
 		closeFolder();
-		await expect(loadRepository(localRef(), { store })).rejects.toThrow(NoFolderError);
+		await expect(loadRepository(localRef(), { store })).rejects.toThrow(NoSourceError);
 	});
 
 	it('has nothing to compare against: a folder keeps no previous reading', async () => {

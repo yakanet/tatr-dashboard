@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	fromDirectoryEntry,
 	fromDirectoryHandle,
 	fromFileList,
 	isWorthKeeping,
@@ -261,5 +262,116 @@ describe('picking the tasks folder itself', () => {
 			})
 		);
 		expect(await readBranch(folder)).toBeUndefined();
+	});
+});
+
+/**
+ * A stand-in for what a dropped folder hands over, callbacks and all — and it
+ * answers `readEntries` two at a time, because a reader that returns everything
+ * at once cannot catch the bug that API is famous for.
+ */
+function entryTree(name: string, tree: Record<string, string>, page = 2): FileSystemDirectoryEntry {
+	const build = (dirName: string, prefix: string): FileSystemDirectoryEntry => {
+		const children = new Map<string, FileSystemEntry>();
+		for (const [path, contents] of Object.entries(tree)) {
+			if (prefix && !path.startsWith(`${prefix}/`)) continue;
+			const rest = prefix ? path.slice(prefix.length + 1) : path;
+			const cut = rest.indexOf('/');
+			if (cut === -1) {
+				children.set(rest, {
+					isDirectory: false,
+					isFile: true,
+					name: rest,
+					file: (ok: (file: File) => void) => ok(new File([contents], rest))
+				} as unknown as FileSystemEntry);
+			} else {
+				const child = rest.slice(0, cut);
+				if (!children.has(child)) {
+					children.set(child, build(child, prefix ? `${prefix}/${child}` : child));
+				}
+			}
+		}
+
+		const find = (path: string) => children.get(path.split('/')[0]);
+
+		return {
+			isDirectory: true,
+			isFile: false,
+			name: dirName,
+			createReader: () => {
+				const all = [...children.values()];
+				let at = 0;
+				return {
+					readEntries: (ok: (batch: FileSystemEntry[]) => void) => {
+						const batch = all.slice(at, at + page);
+						at += batch.length;
+						ok(batch);
+					}
+				};
+			},
+			getDirectory: (
+				path: string,
+				_options: unknown,
+				ok: (found: FileSystemEntry) => void,
+				fail: () => void
+			) => {
+				const found = find(path);
+				found?.isDirectory ? ok(found) : fail();
+			},
+			getFile: (
+				path: string,
+				_options: unknown,
+				ok: (found: FileSystemEntry) => void,
+				fail: () => void
+			) => {
+				const found = find(path);
+				found?.isFile ? ok(found) : fail();
+			}
+		} as unknown as FileSystemDirectoryEntry;
+	};
+
+	return build(name, '');
+}
+
+describe('fromDirectoryEntry', () => {
+	it('reads a dropped repository', async () => {
+		const folder = await fromDirectoryEntry(
+			entryTree('tatr-site', {
+				'tasks/20260101-000001/TASK.md': '# a\n',
+				'tasks/20260101-000002/TASK.md': '# b\n',
+				'tasks/tags': 'ui , screens\n',
+				'.git/HEAD': 'ref: refs/heads/main\n',
+				'src/app.css': 'body{}'
+			})
+		);
+		expect(folder.name).toBe('tatr-site');
+		expect([...folder.files.keys()].toSorted()).toEqual([
+			'.git/HEAD',
+			'tasks/20260101-000001/TASK.md',
+			'tasks/20260101-000002/TASK.md',
+			'tasks/tags'
+		]);
+		expect(await readBranch(folder)).toBe('main');
+	});
+
+	it('keeps reading until the reader says it is done', async () => {
+		// `readEntries` answers a page at a time and ends with an empty array, so
+		// calling it once looks like it worked and loses the rest. Five tasks
+		// through a reader that returns two at a time is the shape that catches it.
+		const tree: Record<string, string> = {};
+		for (let i = 1; i <= 5; i++) tree[`tasks/2026010${i}-000001/TASK.md`] = `# ${i}\n`;
+
+		const folder = await fromDirectoryEntry(entryTree('repo', tree, 2));
+		expect(folder.files.size).toBe(5);
+	});
+
+	it('reads a dropped tasks folder, putting the paths back', async () => {
+		const folder = await fromDirectoryEntry(
+			entryTree('tasks', { '20260101-000001/TASK.md': '# a\n', 'tags': 'ui , a\n' })
+		);
+		expect([...folder.files.keys()].toSorted()).toEqual([
+			'tasks/20260101-000001/TASK.md',
+			'tasks/tags'
+		]);
 	});
 });

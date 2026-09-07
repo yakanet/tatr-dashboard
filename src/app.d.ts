@@ -12,6 +12,14 @@ declare global {
 		}): Promise<FileSystemDirectoryHandle>;
 	}
 
+	interface DataTransferItem {
+		/**
+		 * File System Access again, and undeclared for the same reason: a dropped
+		 * folder arrives as a handle on Chromium and as a legacy entry elsewhere.
+		 */
+		getAsFileSystemHandle?(): Promise<FileSystemHandle | null>;
+	}
+
 	namespace App {
 		// interface Error {}
 		// interface Locals {}

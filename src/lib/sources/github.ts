@@ -14,8 +14,11 @@
  * Measured: a conditional request answering 304 still consumes quota when
  * unauthenticated, so revalidation is not free and caching is done on a TTL.
  */
-import type { RepoRef } from '../repo/ref.ts';
+import { repoKey, type RepoRef } from '../repo/ref.ts';
 import { ProviderError, assertGitHub, type Listing, type Provider } from './provider.ts';
+import { jsdelivr } from './jsdelivr.ts';
+import { ungh } from './ungh.ts';
+import type { OpenOptions, Source, SourceKind } from './source.ts';
 
 const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
@@ -131,3 +134,81 @@ export function rawUrl(ref: RepoRef, branch: string, path: string): string {
 export function blobUrl(ref: RepoRef, branch: string, path: string): string {
 	return `https://${ref.host}/${ref.owner}/${ref.name}/blob/${encodePath(branch)}/${encodePath(path)}`;
 }
+
+/**
+ * The listers this forge falls back through, in order. GitHub first so the
+ * normal path depends on nobody else; the other two are mirrors *of GitHub*,
+ * which is why they belong to it rather than standing beside it as sources.
+ */
+export const PROVIDERS: Provider[] = [github, ungh, jsdelivr];
+
+/**
+ * Lists a repository, falling back through the listers in order.
+ *
+ * Only the listing can be rate-limited, so a spent budget is answered by asking
+ * someone else rather than by an error. A missing repository is missing
+ * everywhere, so that one is not retried.
+ */
+export async function listRepository(
+	ref: RepoRef,
+	options: { providers?: Provider[]; signal?: AbortSignal } = {}
+): Promise<Listing> {
+	const providers = options.providers ?? PROVIDERS;
+	let lastError: unknown;
+
+	for (const provider of providers) {
+		try {
+			return await provider.list(ref, options.signal);
+		} catch (error) {
+			// A missing repository is the same everywhere; do not ask the others.
+			if (error instanceof ProviderError && error.failure === 'not-found') throw error;
+			lastError = error;
+		}
+	}
+	throw lastError ?? new Error('No provider could list the repository');
+}
+
+/**
+ * A repository on a GitHub-shaped forge, as a source.
+ *
+ * The reference is `HEAD` unless one was named, which is a fact about this
+ * forge rather than about sources: both the trees API and raw accept it, so the
+ * request that would resolve a default branch by name is never made.
+ */
+export const githubKind: SourceKind = {
+	id: NAME,
+
+	// Any domain for now, which is every host but the local marker:
+	// `assertGitHub` inside the listers is what actually refuses the others, and
+	// refusing them here is this method's job once a second forge claims some.
+	claims: (ref) => ref.host.includes('.'),
+
+	open(ref: RepoRef, options: OpenOptions = {}): Source {
+		const branch = options.branch ?? ref.branch ?? 'HEAD';
+		const doFetch = options.fetchImpl ?? fetch;
+
+		return {
+			id: NAME,
+			label: `${ref.owner}/${ref.name}`,
+			cacheKey: repoKey(ref),
+			// Polite to the CDN while still finishing in well under a second.
+			concurrency: 12,
+			// At the price of one request, which is what the reader is asking for.
+			repeatable: true,
+
+			list: (signal) => listRepository(ref, { providers: options.providers, signal }),
+
+			async read(path, signal) {
+				try {
+					const response = await doFetch(rawUrl(ref, branch, path), { signal });
+					return response.ok ? await response.text() : null;
+				} catch {
+					return null;
+				}
+			},
+
+			assetUrl: (path) => rawUrl(ref, branch, path),
+			fileUrl: (path) => blobUrl(ref, branch, path)
+		};
+	}
+};

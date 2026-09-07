@@ -5,7 +5,8 @@
  * rate-limited, then the task files stream in and are counted. Showing that
  * split is what lets the UI explain a failure instead of just spinning.
  */
-import { loadRepository, NoFolderError, NoTasksFolderError } from '../sources/load.ts';
+import { loadRepository, NoTasksFolderError } from '../sources/load.ts';
+import { NoSourceError } from '../sources/source.ts';
 import { ProviderError, type ProviderFailure } from '../sources/provider.ts';
 import { describeRef, type RepoRef } from '../repo/ref.ts';
 import { compare, type Changes, type Movement, type Snapshot } from '../tatr/changes.ts';
@@ -18,7 +19,7 @@ export const REPOSITORY = Symbol('repository');
 export type Phase = 'idle' | 'listing' | 'reading' | 'ready' | 'failed';
 
 export interface Failure {
-	kind: ProviderFailure | 'no-tasks-folder' | 'no-folder' | 'unknown';
+	kind: ProviderFailure | 'no-tasks-folder' | 'no-source' | 'unknown';
 	message: string;
 }
 
@@ -132,8 +133,10 @@ export class RepositoryState {
 }
 
 function describe(error: unknown): Failure {
-	if (error instanceof NoFolderError) {
-		return { kind: 'no-folder', message: error.message };
+	if (error instanceof NoSourceError) {
+		// A source with nothing behind it yet: today only a folder can be in that
+		// state, the browser having taken its grant back on the reload.
+		return { kind: 'no-source', message: error.message };
 	}
 	if (error instanceof NoTasksFolderError) {
 		return { kind: 'no-tasks-folder', message: error.message };
