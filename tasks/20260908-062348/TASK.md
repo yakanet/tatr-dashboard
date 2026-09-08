@@ -150,3 +150,42 @@ markup, and markup whitespace is significant — the space around an inline code
 span in a title, the gaps between the header's clauses. The list, the graph and
 the header all still read right.
 
+---
+
+`provider.ts` is dissolved, which was the deepest of the audit's findings and
+the only one touching the vocabulary the UI reads.
+
+`Provider` had become a single-method interface with two implementations, both
+GitHub, and one consumer — so it was never a layer, it was a function type
+wearing a shape. It is now `type Lister = (ref, signal?) => Promise<Listing>`,
+declared with the chain it serves in `github/kind.ts`, and the two wrapper
+objects around `api.ts` and `ungh.ts` disappeared with it: each module exports
+the function it always was, `listViaApi` and `listViaUngh`.
+
+`Listing`, `TreeEntry` and the failure vocabulary moved to `source.ts`, where
+`Source.list` was already promising them. `sources/` is now: the contract, the
+registry, the loader, the cache, and one folder per source.
+
+Two departures from what the review proposed, both argued rather than assumed:
+
+- **`ProviderError` became `ListingError`, not `SourceError`.** Listing is the
+  operation that fails this way — a spent budget, a repository that is not
+  there, a host nobody serves — while reading a file never throws and a source
+  with nothing behind it throws `NoSourceError`. `SourceError` beside
+  `NoSourceError` would have been two names for two unrelated things, differing
+  by a word.
+- **`Listed` in `tatr/attachments.ts` stays.** The review called it `TreeEntry`
+  under another name, which it is; what it also is, is the boundary that keeps
+  the domain from importing the source contract. `tatr/` imports nothing from
+  `sources/` — verified — and that is worth one duplicated pair of fields.
+
+The seam kept its shape without naming a type it must not import:
+`OpenOptions.listers` is spelled out structurally, and `LoadOptions` refers to
+it. And the word followed the type: `PROVIDERS` is `LISTERS`, `providers` is
+`listers`, and nothing in `src/` says "provider" any more.
+
+The specs went with it. A fake lister is a function now, so three tests that
+wrapped an object's method spy on the function itself — shorter, and asking the
+same question. 584 tests unchanged, `svelte-check` at zero, and the module count
+of `sources/` down by one.
+

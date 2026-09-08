@@ -8,31 +8,29 @@ import { githubKind } from './github/kind.ts';
 import { fromFileList } from './local/folder.ts';
 import { closeFolder, openFolder } from './local/kind.ts';
 import { localRef } from '../repo/ref.ts';
-import { ProviderError, type Listing, type Provider } from './provider.ts';
+import { ListingError, type Listing, type OpenOptions } from './source.ts';
 
 const sources = rawTasks as Record<string, string>;
 const ref = parseRepoPath('tsoding/tatr')!;
 
-/** A provider that answers from the embedded fixture. */
-function fakeProvider(overrides: Partial<Listing> = {}): Provider {
-	return {
-		list: async () => ({
-			entries: [
-				...Object.keys(sources).map((id) => ({ path: `tasks/${id}/TASK.md`, size: 1 })),
-				{ path: 'tasks/tags' },
-				{ path: 'README.md' }
-			],
-			branch: 'HEAD',
-			...overrides
-		})
-	};
+/** A lister that answers from the embedded fixture. */
+function fakeLister(overrides: Partial<Listing> = {}) {
+	return async (): Promise<Listing> => ({
+		entries: [
+			...Object.keys(sources).map((id) => ({ path: `tasks/${id}/TASK.md`, size: 1 })),
+			{ path: 'tasks/tags' },
+			{ path: 'README.md' }
+		],
+		branch: 'HEAD',
+		...overrides
+	});
 }
 
-const failing = (name: string, failure: 'rate-limited' | 'not-found' | 'network'): Provider => ({
-	list: async () => {
-		throw new ProviderError(failure, name, failure);
-	}
-});
+const failing =
+	(name: string, failure: 'rate-limited' | 'not-found' | 'network') =>
+	async (): Promise<Listing> => {
+		throw new ListingError(failure, name, failure);
+	};
 
 /** Serves task files, and the tags file, from the fixture. */
 const fetchFixture = vi.fn(async (input: RequestInfo | URL) => {
@@ -56,55 +54,52 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
-describe('provider fallback', () => {
+describe('lister fallback', () => {
 	/**
 	 * Through the door the application uses: the chain is the forge's own
 	 * business, reached by opening the source and asking it to list.
 	 */
-	const list = (providers: Provider[]) => githubKind.open(ref, { providers }).list();
+	const list = (listers: OpenOptions['listers']) => githubKind.open(ref, { listers }).list();
 
 	// A listing no longer says who produced it, so the question is put to the
-	// providers themselves — which is the stronger form of it anyway: that the
+	// listers themselves — which is the stronger form of it anyway: that the
 	// second was asked, rather than that the answer carries its name.
-	it('stops at the first provider that answers', async () => {
-		const first = fakeProvider();
-		const second = fakeProvider();
-		const spy = vi.spyOn(second, 'list');
+	it('stops at the first lister that answers', async () => {
+		const first = fakeLister();
+		const second = vi.fn(fakeLister());
 
 		const listing = await list([first, second]);
 
 		expect(listing.entries.length).toBeGreaterThan(0);
-		expect(spy).not.toHaveBeenCalled();
+		expect(second).not.toHaveBeenCalled();
 	});
 
 	it('falls through when the budget is spent', async () => {
-		const second = fakeProvider();
-		const spy = vi.spyOn(second, 'list');
+		const second = vi.fn(fakeLister());
 
 		const listing = await list([failing('github', 'rate-limited'), second]);
 
-		expect(spy).toHaveBeenCalled();
+		expect(second).toHaveBeenCalled();
 		expect(listing.entries.length).toBeGreaterThan(0);
 	});
 
 	it('does not ask the others when the repository does not exist', async () => {
-		const second = fakeProvider();
-		const spy = vi.spyOn(second, 'list');
-		await expect(list([failing('github', 'not-found'), second])).rejects.toThrow(ProviderError);
-		expect(spy).not.toHaveBeenCalled();
+		const second = vi.fn(fakeLister());
+		await expect(list([failing('github', 'not-found'), second])).rejects.toThrow(ListingError);
+		expect(second).not.toHaveBeenCalled();
 	});
 
-	it('rethrows when every provider fails', async () => {
+	it('rethrows when every lister fails', async () => {
 		await expect(
 			list([failing('github', 'rate-limited'), failing('ungh', 'network')])
-		).rejects.toThrow(ProviderError);
+		).rejects.toThrow(ListingError);
 	});
 });
 
 describe('loadRepository', () => {
 	it('reads every task in the repository', async () => {
 		const result = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -115,7 +110,7 @@ describe('loadRepository', () => {
 
 	it('reads the tag descriptions when the file is listed', async () => {
 		const result = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -125,7 +120,7 @@ describe('loadRepository', () => {
 	it('reports progress as files arrive', async () => {
 		const onProgress = vi.fn();
 		await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store,
 			onProgress
@@ -145,7 +140,7 @@ describe('loadRepository', () => {
 		}) as unknown as typeof fetch;
 
 		await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: counting,
 			store,
 			concurrency: 4
@@ -154,11 +149,12 @@ describe('loadRepository', () => {
 	});
 
 	it('refuses a repository with no tasks folder', async () => {
-		const bare: Provider = {
-			list: async () => ({ entries: [{ path: 'README.md' }], branch: 'HEAD' })
-		};
+		const bare = async (): Promise<Listing> => ({
+			entries: [{ path: 'README.md' }],
+			branch: 'HEAD'
+		});
 		await expect(
-			loadRepository(ref, { providers: [bare], fetchImpl: fetchFixture, store })
+			loadRepository(ref, { listers: [bare], fetchImpl: fetchFixture, store })
 		).rejects.toThrow(NoTasksFolderError);
 	});
 
@@ -169,7 +165,7 @@ describe('loadRepository', () => {
 		}) as unknown as typeof fetch;
 
 		const result = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: flaky,
 			store
 		});
@@ -178,14 +174,13 @@ describe('loadRepository', () => {
 	});
 
 	it('skips folders whose name is not a task id', async () => {
-		const withJunk = fakeProvider();
-		const original = withJunk.list;
-		withJunk.list = async (r, s) => {
-			const listing = await original(r, s);
+		const listed = fakeLister();
+		const withJunk = async (): Promise<Listing> => {
+			const listing = await listed();
 			return { ...listing, entries: [...listing.entries, { path: 'tasks/notes/TASK.md' }] };
 		};
 		const result = await loadRepository(ref, {
-			providers: [withJunk],
+			listers: [withJunk],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -193,14 +188,13 @@ describe('loadRepository', () => {
 	});
 
 	it('works when the repository has no tags file', async () => {
-		const noTags = fakeProvider();
-		const original = noTags.list;
-		noTags.list = async (r, s) => {
-			const listing = await original(r, s);
+		const listed = fakeLister();
+		const noTags = async (): Promise<Listing> => {
+			const listing = await listed();
 			return { ...listing, entries: listing.entries.filter((e) => e.path !== 'tasks/tags') };
 		};
 		const result = await loadRepository(ref, {
-			providers: [noTags],
+			listers: [noTags],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -210,51 +204,49 @@ describe('loadRepository', () => {
 
 describe('caching', () => {
 	it('serves a revisit from store, spending no quota at all', async () => {
-		const provider = fakeProvider();
-		const spy = vi.spyOn(provider, 'list');
+		const lister = vi.fn(fakeLister());
 
 		const first = await loadRepository(ref, {
-			providers: [provider],
+			listers: [lister],
 			fetchImpl: fetchFixture,
 			store
 		});
 		expect(first.fromCache).toBe(false);
 
 		const second = await loadRepository(ref, {
-			providers: [provider],
+			listers: [lister],
 			fetchImpl: fetchFixture,
 			store
 		});
 		expect(second.fromCache).toBe(true);
 		expect(second.tasks).toHaveLength(64);
 		// The listing is the only rate-limited call; it must not happen twice.
-		expect(spy).toHaveBeenCalledTimes(1);
+		expect(lister).toHaveBeenCalledTimes(1);
 	});
 
 	it('refetches when the reader asks for a refresh', async () => {
-		const provider = fakeProvider();
-		const spy = vi.spyOn(provider, 'list');
+		const lister = vi.fn(fakeLister());
 
-		await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, store });
+		await loadRepository(ref, { listers: [lister], fetchImpl: fetchFixture, store });
 		const refreshed = await loadRepository(ref, {
-			providers: [provider],
+			listers: [lister],
 			fetchImpl: fetchFixture,
 			store,
 			refresh: true
 		});
 		expect(refreshed.fromCache).toBe(false);
-		expect(spy).toHaveBeenCalledTimes(2);
+		expect(lister).toHaveBeenCalledTimes(2);
 	});
 
 	it('reports when the cached view was fetched, so the UI can show its age', async () => {
 		await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store,
 			now: () => 1_000
 		});
 		const cached = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -262,9 +254,9 @@ describe('caching', () => {
 	});
 
 	it('restores dates across the cache, which JSON cannot carry', async () => {
-		await loadRepository(ref, { providers: [fakeProvider()], fetchImpl: fetchFixture, store });
+		await loadRepository(ref, { listers: [fakeLister()], fetchImpl: fetchFixture, store });
 		const cached = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -274,9 +266,9 @@ describe('caching', () => {
 	});
 
 	it('restores the tag descriptions, which are a Map', async () => {
-		await loadRepository(ref, { providers: [fakeProvider()], fetchImpl: fetchFixture, store });
+		await loadRepository(ref, { listers: [fakeLister()], fetchImpl: fetchFixture, store });
 		const cached = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -285,7 +277,7 @@ describe('caching', () => {
 
 	it('works with no storage at all, as in a private window', async () => {
 		const result = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store: memoryStore()
 		});
@@ -297,7 +289,7 @@ describe('caching', () => {
 describe('what the cache keeps', () => {
 	it('returns the bodies the caller just paid for', async () => {
 		const result = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -305,9 +297,9 @@ describe('what the cache keeps', () => {
 	});
 
 	it('stores metadata only, dropping the descriptions', async () => {
-		await loadRepository(ref, { providers: [fakeProvider()], fetchImpl: fetchFixture, store });
+		await loadRepository(ref, { listers: [fakeLister()], fetchImpl: fetchFixture, store });
 		const cached = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -316,9 +308,9 @@ describe('what the cache keeps', () => {
 	});
 
 	it('keeps the references, so the graph survives without the prose', async () => {
-		await loadRepository(ref, { providers: [fakeProvider()], fetchImpl: fetchFixture, store });
+		await loadRepository(ref, { listers: [fakeLister()], fetchImpl: fetchFixture, store });
 		const cached = await loadRepository(ref, {
-			providers: [fakeProvider()],
+			listers: [fakeLister()],
 			fetchImpl: fetchFixture,
 			store
 		});
@@ -346,19 +338,17 @@ describe('what the cache keeps', () => {
  * which the 64-task fixture cannot be, being a fixture.
  */
 function mutable(files: Record<string, string>) {
-	const provider: Provider = {
-		list: async () => ({
-			entries: Object.keys(files).map((id) => ({ path: `tasks/${id}/TASK.md`, size: 1 })),
-			branch: 'HEAD'
-		})
-	};
+	const lister = async (): Promise<Listing> => ({
+		entries: Object.keys(files).map((id) => ({ path: `tasks/${id}/TASK.md`, size: 1 })),
+		branch: 'HEAD'
+	});
 	const fetchImpl = (async (input: RequestInfo | URL) => {
 		const match = /tasks\/([^/]+)\/TASK\.md$/.exec(String(input));
 		return match && files[match[1]]
 			? new Response(files[match[1]], { status: 200 })
 			: new Response('not found', { status: 404 });
 	}) as unknown as typeof fetch;
-	return { provider, fetchImpl };
+	return { lister, fetchImpl };
 }
 
 const file = (priority: number, tags: string, status = 'OPEN') =>
@@ -369,15 +359,15 @@ describe('what the reader last saw', () => {
 	const b = '20260202-000002';
 
 	it('has nothing behind a first visit', async () => {
-		const { provider, fetchImpl } = mutable({ [a]: file(90, 'ui') });
-		const first = await loadRepository(ref, { providers: [provider], fetchImpl, store });
+		const { lister, fetchImpl } = mutable({ [a]: file(90, 'ui') });
+		const first = await loadRepository(ref, { listers: [lister], fetchImpl, store });
 		expect(first.previous).toBeNull();
 	});
 
 	it('carries the previous reading through a refresh, with its age', async () => {
 		const files = { [a]: file(90, 'ui'), [b]: file(50, '') };
-		const { provider, fetchImpl } = mutable(files);
-		const options = { providers: [provider], fetchImpl, store };
+		const { lister, fetchImpl } = mutable(files);
+		const options = { listers: [lister], fetchImpl, store };
 
 		await loadRepository(ref, { ...options, now: () => 1_000 });
 		files[a] = file(90, 'ui', 'CLOSED');
@@ -393,8 +383,8 @@ describe('what the reader last saw', () => {
 
 	it('still carries it on the next visit, so the news survives a reload', async () => {
 		const files = { [a]: file(90, 'ui') };
-		const { provider, fetchImpl } = mutable(files);
-		const options = { providers: [provider], fetchImpl, store };
+		const { lister, fetchImpl } = mutable(files);
+		const options = { listers: [lister], fetchImpl, store };
 
 		await loadRepository(ref, { ...options, now: () => 1_000 });
 		files[a] = file(110, 'ui');
@@ -407,8 +397,8 @@ describe('what the reader last saw', () => {
 
 	it('replaces it on the next refresh rather than accumulating readings', async () => {
 		const files = { [a]: file(90, 'ui') };
-		const { provider, fetchImpl } = mutable(files);
-		const options = { providers: [provider], fetchImpl, store };
+		const { lister, fetchImpl } = mutable(files);
+		const options = { listers: [lister], fetchImpl, store };
 
 		await loadRepository(ref, { ...options, now: () => 1_000 });
 		files[a] = file(100, 'ui');
@@ -426,8 +416,8 @@ describe('what the reader last saw', () => {
 		// on — so what a view gets is a snapshot identical to the tasks, which
 		// compares to no movement.
 		const files = { [a]: file(90, 'ui') };
-		const { provider, fetchImpl } = mutable(files);
-		const options = { providers: [provider], fetchImpl, store };
+		const { lister, fetchImpl } = mutable(files);
+		const options = { listers: [lister], fetchImpl, store };
 
 		await loadRepository(ref, { ...options, now: () => 1_000 });
 		const again = await loadRepository(ref, { ...options, refresh: true, now: () => 2_000 });
@@ -464,11 +454,10 @@ describe('a folder on this machine', () => {
 		expect(result.label).toBe('my-project');
 	});
 
-	it('spends no quota and asks no provider, there being nothing to ask', async () => {
-		const provider = fakeProvider();
-		const spy = vi.spyOn(provider, 'list');
-		await loadRepository(open([task('20260101-000001', 90)]), { providers: [provider], store });
-		expect(spy).not.toHaveBeenCalled();
+	it('spends no quota and asks no lister, there being nothing to ask', async () => {
+		const lister = vi.fn(fakeLister());
+		await loadRepository(open([task('20260101-000001', 90)]), { listers: [lister], store });
+		expect(lister).not.toHaveBeenCalled();
 	});
 
 	it('is never served from the cache, nor written to it', async () => {

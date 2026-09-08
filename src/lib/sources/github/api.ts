@@ -12,7 +12,7 @@
  * refreshed behind the reader's back.
  */
 import type { RepoRef } from '../../repo/ref.ts';
-import { ProviderError, type Provider } from '../provider.ts';
+import { ListingError, type Listing } from '../source.ts';
 
 const API = 'https://api.github.com';
 const NAME = 'github';
@@ -30,51 +30,50 @@ async function json(url: string, signal?: AbortSignal): Promise<Response> {
 			headers: { Accept: 'application/vnd.github+json' }
 		});
 	} catch {
-		throw new ProviderError('network', NAME, `Could not reach ${url}`);
+		throw new ListingError('network', NAME, `Could not reach ${url}`);
 	}
 
 	if (response.status === 403 || response.status === 429) {
 		const remaining = response.headers.get('x-ratelimit-remaining');
 		if (remaining === '0' || response.status === 429) {
-			throw new ProviderError('rate-limited', NAME, 'GitHub API rate limit reached');
+			throw new ListingError('rate-limited', NAME, 'GitHub API rate limit reached');
 		}
 	}
 	if (response.status === 404) {
-		throw new ProviderError('not-found', NAME, 'Repository or branch not found');
+		throw new ListingError('not-found', NAME, 'Repository or branch not found');
 	}
 	if (!response.ok) {
-		throw new ProviderError('network', NAME, `GitHub answered ${response.status}`);
+		throw new ListingError('network', NAME, `GitHub answered ${response.status}`);
 	}
 	return response;
 }
 
-export const github: Provider = {
-	async list(ref, signal) {
-		// `HEAD` avoids a second request to learn the default branch's name.
-		const branch = ref.branch ?? 'HEAD';
-		const response = await json(
-			`${API}/repos/${ref.owner}/${ref.name}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
-			signal
-		);
-		const body = (await response.json()) as TreeResponse;
-		if (!Array.isArray(body.tree)) {
-			throw new ProviderError('malformed', NAME, 'No tree in the response');
-		}
-		if (body.truncated) {
-			throw new ProviderError(
-				'malformed',
-				NAME,
-				'Repository tree is truncated; it is too large to list in one call'
-			);
-		}
-
-		return {
-			entries: body.tree
-				.filter((entry) => entry.type === 'blob')
-				.map((entry) =>
-					entry.size === undefined ? { path: entry.path } : { path: entry.path, size: entry.size }
-				),
-			branch
-		};
+/** Lists a repository through the trees API. */
+export async function listViaApi(ref: RepoRef, signal?: AbortSignal): Promise<Listing> {
+	// `HEAD` avoids a second request to learn the default branch's name.
+	const branch = ref.branch ?? 'HEAD';
+	const response = await json(
+		`${API}/repos/${ref.owner}/${ref.name}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+		signal
+	);
+	const body = (await response.json()) as TreeResponse;
+	if (!Array.isArray(body.tree)) {
+		throw new ListingError('malformed', NAME, 'No tree in the response');
 	}
-};
+	if (body.truncated) {
+		throw new ListingError(
+			'malformed',
+			NAME,
+			'Repository tree is truncated; it is too large to list in one call'
+		);
+	}
+
+	return {
+		entries: body.tree
+			.filter((entry) => entry.type === 'blob')
+			.map((entry) =>
+				entry.size === undefined ? { path: entry.path } : { path: entry.path, size: entry.size }
+			),
+		branch
+	};
+}

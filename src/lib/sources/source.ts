@@ -11,7 +11,44 @@
  * type without anything importing it back.
  */
 import type { RepoRef } from '../repo/ref.ts';
-import type { Listing, Provider } from './provider.ts';
+
+/** One file a source holds: a path from the repository root, sometimes a size. */
+export interface TreeEntry {
+	path: string;
+	size?: number;
+}
+
+/** What a source answers when asked what it holds. */
+export interface Listing {
+	entries: TreeEntry[];
+	/** The branch the listing was taken from, once resolved. */
+	branch: string;
+}
+
+/**
+ * How a reading failed, in the vocabulary the page needs to explain it.
+ *
+ * `ListingError` rather than a source error, because listing is the operation
+ * that fails this way: a spent budget, a repository that is not there, a host
+ * nobody serves. Reading a file never throws — one unreadable task is listed as
+ * skipped instead of taking the whole load down — and a source with nothing
+ * behind it throws {@link NoSourceError}, which is a different sentence.
+ */
+export type ListingFailure =
+	'rate-limited' | 'not-found' | 'network' | 'unsupported-host' | 'malformed';
+
+export class ListingError extends Error {
+	readonly failure: ListingFailure;
+	/** Who could not answer: a lister's name, or the forge that refused. */
+	readonly source: string;
+
+	constructor(failure: ListingFailure, source: string, message: string) {
+		super(message);
+		this.name = 'ListingError';
+		this.failure = failure;
+		this.source = source;
+	}
+}
 
 /**
  * Thrown when a source exists but has nothing to read yet.
@@ -75,7 +112,7 @@ export interface Source {
 	 */
 	refresh?(): Promise<void>;
 
-	/** Every file it holds, once. Throws {@link ProviderError} or {@link NoSourceError}. */
+	/** Every file it holds, once. Throws {@link ListingError} or {@link NoSourceError}. */
 	list(signal?: AbortSignal): Promise<Listing>;
 
 	/** One file as text, or null when it cannot be read. */
@@ -103,8 +140,14 @@ export interface OpenOptions {
 	branch?: string;
 	/** Substitutes for the network, for tests. */
 	fetchImpl?: typeof fetch;
-	/** Which listers to try, in order, for tests. */
-	providers?: Provider[];
+	/**
+	 * Which listers to try, in order, for tests.
+	 *
+	 * Spelled out rather than named: only a forge owns a chain of these, so the
+	 * type lives with the forge, and a contract that imported it would import an
+	 * implementation.
+	 */
+	listers?: readonly ((ref: RepoRef, signal?: AbortSignal) => Promise<Listing>)[];
 }
 
 /**

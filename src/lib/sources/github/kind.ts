@@ -17,10 +17,15 @@
  * are not — is a fact about this forge, not about sources.
  */
 import { repoKey, type RepoRef } from '../../repo/ref.ts';
-import { ProviderError, type Listing, type Provider } from '../provider.ts';
-import { github } from './api.ts';
-import { ungh } from './ungh.ts';
-import type { OpenOptions, Source, SourceKind } from '../source.ts';
+import {
+	ListingError,
+	type Listing,
+	type OpenOptions,
+	type Source,
+	type SourceKind
+} from '../source.ts';
+import { listViaApi } from './api.ts';
+import { listViaUngh } from './ungh.ts';
 
 const RAW = 'https://raw.githubusercontent.com';
 /** The forge's own id, which its primary lister happens to answer to as well. */
@@ -35,7 +40,7 @@ const NAME = 'github';
  */
 function assertHost(ref: RepoRef): void {
 	if (ref.host !== 'github.com') {
-		throw new ProviderError(
+		throw new ListingError(
 			'unsupported-host',
 			NAME,
 			`${ref.host} is not supported yet — only github.com`
@@ -84,7 +89,14 @@ function blobUrl(ref: RepoRef, branch: string, path: string): string {
  * repository's 64 tasks when measured, missing the newest. Two third parties
  * for that last case was more machinery than a reader of task folders needs.
  */
-const PROVIDERS: Provider[] = [github, ungh];
+/**
+ * One way of listing a repository — a function, there being nothing else to a
+ * lister. The name it answers to lives in the failures it throws, which is
+ * where provenance is read.
+ */
+type Lister = (ref: RepoRef, signal?: AbortSignal) => Promise<Listing>;
+
+const LISTERS: Lister[] = [listViaApi, listViaUngh];
 
 /**
  * Lists a repository, falling back through the listers in order.
@@ -95,22 +107,22 @@ const PROVIDERS: Provider[] = [github, ungh];
  */
 async function listRepository(
 	ref: RepoRef,
-	options: { providers?: Provider[]; signal?: AbortSignal } = {}
+	options: { listers?: readonly Lister[]; signal?: AbortSignal } = {}
 ): Promise<Listing> {
 	assertHost(ref);
-	const providers = options.providers ?? PROVIDERS;
+	const listers = options.listers ?? LISTERS;
 	let lastError: unknown;
 
-	for (const provider of providers) {
+	for (const lister of listers) {
 		try {
-			return await provider.list(ref, options.signal);
+			return await lister(ref, options.signal);
 		} catch (error) {
 			// A missing repository is the same everywhere; do not ask the others.
-			if (error instanceof ProviderError && error.failure === 'not-found') throw error;
+			if (error instanceof ListingError && error.failure === 'not-found') throw error;
 			lastError = error;
 		}
 	}
-	throw lastError ?? new Error('No provider could list the repository');
+	throw lastError ?? new Error('No lister could list the repository');
 }
 
 /**
@@ -141,7 +153,7 @@ export const githubKind: SourceKind = {
 			// At the price of one request, which is what the reader is asking for.
 			repeatable: true,
 
-			list: (signal) => listRepository(ref, { providers: options.providers, signal }),
+			list: (signal) => listRepository(ref, { listers: options.listers, signal }),
 
 			async read(path, signal) {
 				try {

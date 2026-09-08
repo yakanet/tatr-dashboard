@@ -6,8 +6,7 @@
  * split is what lets the UI explain a failure instead of just spinning.
  */
 import { loadRepository, NoTasksFolderError } from '../sources/load.ts';
-import { NoSourceError } from '../sources/source.ts';
-import { ProviderError, type ProviderFailure } from '../sources/provider.ts';
+import { ListingError, NoSourceError, type ListingFailure } from '../sources/source.ts';
 import { describeRef, type RepoRef } from '../repo/ref.ts';
 import { compare, type Changes, type Movement, type Snapshot } from '../tatr/changes.ts';
 import type { Task } from '../tatr/task.ts';
@@ -19,7 +18,7 @@ export const REPOSITORY = Symbol('repository');
 export type Phase = 'idle' | 'listing' | 'reading' | 'ready' | 'failed';
 
 export interface Failure {
-	kind: ProviderFailure | 'no-tasks-folder' | 'no-source' | 'unknown';
+	kind: ListingFailure | 'no-tasks-folder' | 'no-source' | 'unknown';
 	message: string;
 }
 
@@ -166,7 +165,7 @@ function describe(error: unknown): Failure {
 	if (error instanceof NoTasksFolderError) {
 		return { kind: 'no-tasks-folder', message: error.message };
 	}
-	if (error instanceof ProviderError) {
+	if (error instanceof ListingError) {
 		return { kind: error.failure, message: error.message };
 	}
 	return {

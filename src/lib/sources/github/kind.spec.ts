@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { githubKind } from './kind.ts';
-import { ProviderError } from '../provider.ts';
+import { ListingError } from '../source.ts';
 import { parseRepoInput } from '../../repo/ref.ts';
 
 const ref = parseRepoInput('tsoding/tatr')!;
@@ -55,22 +55,20 @@ describe('a host this forge does not serve', () => {
 
 	it('is refused as unsupported, without asking anybody', async () => {
 		let asked = 0;
-		const counting = {
-			list: async () => {
-				asked += 1;
-				throw new Error('should not be reached');
-			}
+		const counting = async () => {
+			asked += 1;
+			throw new Error('should not be reached');
 		};
 
 		const failure = await githubKind
-			.open(elsewhere, { providers: [counting] })
+			.open(elsewhere, { listers: [counting] })
 			.list()
 			.catch((error: unknown) => error);
 
-		expect(failure).toBeInstanceOf(ProviderError);
-		expect((failure as ProviderError).failure).toBe('unsupported-host');
+		expect(failure).toBeInstanceOf(ListingError);
+		expect((failure as ListingError).failure).toBe('unsupported-host');
 		// The forge refusing, not whichever lister was asked last.
-		expect((failure as ProviderError).source).toBe('github');
+		expect((failure as ListingError).source).toBe('github');
 		expect(asked).toBe(0);
 	});
 });

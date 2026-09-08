@@ -69,7 +69,7 @@ const UNITS = ['B', 'kB', 'MB'] as const;
 /**
  * A size worth reading at a glance: two significant figures at most, and the
  * unit that keeps the number small. Absent sizes render as nothing rather than
- * as a zero, because a provider that does not report one has not said it is
+ * as a zero, because a listing that does not report one has not said it is
  * empty.
  */
 export function formatSize(bytes: number | undefined): string {

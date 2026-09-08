@@ -61,7 +61,7 @@ describe('collectAttachments', () => {
 		]);
 	});
 
-	it('omits a size no provider reported rather than inventing one', () => {
+	it('omits a size no listing reported rather than inventing one', () => {
 		const found = collectAttachments([{ path: 'tasks/20260101-000001/a.png' }]);
 		expect(found.get('20260101-000001')).toEqual([
 			{ name: 'a.png', path: 'tasks/20260101-000001/a.png' }

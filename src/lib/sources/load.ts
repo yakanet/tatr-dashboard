@@ -1,7 +1,7 @@
 /**
  * Loads a repository's tasks: list once, then read the task files in parallel.
  *
- * Only the listing can be rate-limited, so providers are tried in order —
+ * Only the listing can be rate-limited, so listers are tried in order —
  * GitHub, then ungh — and the result reports which one answered. Contents
  * always come from raw.githubusercontent, which imposes no budget.
  *
@@ -22,12 +22,13 @@ import { parseTaskMd } from '../tatr/task-md.ts';
 import { parseTagsFile, type TagDescriptions } from '../tatr/tags-file.ts';
 import { isValidHuid } from '../tatr/huid.ts';
 import { describeRef, type RepoRef } from '../repo/ref.ts';
+import { ListingError, NoSourceError, type OpenOptions } from './source.ts';
 import { openSource } from './open.ts';
 import { openStore, type RepoStore } from './store.ts';
-import { ProviderError, type Listing, type Provider } from './provider.ts';
 
 export interface LoadOptions {
-	providers?: Provider[];
+	/** Passed through to the source; see {@link OpenOptions.listers}. */
+	listers?: OpenOptions['listers'];
 	/** Parallel reads. Polite to the CDN while still finishing in well under a second. */
 	concurrency?: number;
 	signal?: AbortSignal;
@@ -145,9 +146,9 @@ const TASK_FILE = /^tasks\/[^/]+\/TASK\.md$/;
  * a folder for nothing answers null, and there is no cache to go stale.
  */
 export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): Promise<LoadResult> {
-	const source = openSource(ref, { fetchImpl: options.fetchImpl, providers: options.providers });
+	const source = openSource(ref, { fetchImpl: options.fetchImpl, listers: options.listers });
 	if (!source) {
-		throw new ProviderError('unsupported-host', ref.host, `${ref.host} is not served`);
+		throw new ListingError('unsupported-host', ref.host, `${ref.host} is not served`);
 	}
 
 	// For a forge a refresh is this function ignoring the cache; for a folder it
