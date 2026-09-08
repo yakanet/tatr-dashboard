@@ -84,3 +84,40 @@ Both reads are behind `refresh` now, so the path an effect takes touches
 neither. No cheap test covers it: the fault is a reactivity property, not a
 value, and pinning it needs an `$effect.root` test — which is the exact payoff
 of opening the view-test slot, since a spec file for one cannot run today.
+
+---
+
+Stages two and four done.
+
+**A folder that is neither a repository nor a tasks folder is now left alone.**
+Both handle walks ask for the proof the directory-input door already asked for
+on paths: an immediate child holding a `TASK.md`. Only the top level is
+examined, and only until one child answers, so a real tasks folder costs one
+lookup and a mistaken selection costs one per top-level entry instead of a walk
+of everything beneath it. The empty map that comes back is what lets
+`NoTasksFolderError` reach the reader, which is the whole point: the old
+behaviour prefixed a whole disk with `tasks/` and left the loader unable to say
+anything but "0 tasks".
+
+Four tests, and both guards proved to bite by removing them. The drop door gets
+its own pair, being the one with no dialog in front of it — on Firefox and
+Safari nothing asks the reader to confirm a file count before that walk begins.
+
+**Skipped folders are said out loud.** `repo.skipped` was computed and read by
+nobody, so a task folder the parser refused vanished and the count could differ
+from `tatr ls` with nothing on screen to explain it. The header now carries one
+clause — `· 1 folder skipped` — with the folders and reasons in its tooltip.
+There rather than in a view because it is a fact about the reading, and in a
+tooltip because naming them inline would push the header around for a case that
+is rare.
+
+Verified by making the case rather than waiting for it: four files pushed
+through the application's own directory input, one of them in a folder called
+`notes`. The dashboard read two tasks and the header said the third was
+skipped, naming it.
+
+Left as it was, and the audit was wrong about it: `"#lib"` in `package.json` is
+SvelteKit's own convention, not a dangling mapping of ours — its `write_tsconfig`
+test app ships the same pair, and `svelte-kit sync` reads `imports` to write the
+tsconfig paths.
+

@@ -156,7 +156,11 @@ export async function fromDirectoryHandle(handle: FileSystemDirectoryHandle): Pr
     // them at its root. Either way they end up under `tasks/`, where the rest of
     // this viewer looks for them.
     const inside = await directoryOrNull(handle, 'tasks');
-    await walk(inside ?? handle, 'tasks');
+    // And a folder that is neither is left alone. Without this the walk descended
+    // the whole selection under a `tasks/` prefix — `node_modules` included — and
+    // the loader, seeing paths that begin with `tasks/`, could not say there was
+    // no tasks folder: the reader waited, then read "0 tasks".
+    if (inside || (await holdsTaskFolders(handle))) await walk(inside ?? handle, 'tasks');
 
     if (inside) {
         const head = await fileOrNull(await directoryOrNull(handle, '.git'), 'HEAD');
@@ -164,6 +168,23 @@ export async function fromDirectoryHandle(handle: FileSystemDirectoryHandle): Pr
     }
 
     return {name: handle.name, files};
+}
+
+/**
+ * Whether this folder is itself a `tasks/` folder — the test the directory input
+ * makes on paths, asked of a handle: a task folder holds a `TASK.md`, so a
+ * folder of task folders is a tasks folder.
+ *
+ * Only the immediate children, and only until one answers: a real tasks folder
+ * costs one lookup, and a mistaken selection costs one per top-level entry
+ * rather than a walk of everything beneath it.
+ */
+async function holdsTaskFolders(dir: FileSystemDirectoryHandle): Promise<boolean> {
+    for await (const [, entry] of dir.entries()) {
+        if (entry.kind !== 'directory') continue;
+        if (await fileOrNull(entry, 'TASK.md')) return true;
+    }
+    return false;
 }
 
 async function directoryOrNull(
@@ -254,7 +275,19 @@ export async function fromDirectoryEntry(entry: FileSystemDirectoryEntry): Promi
     }
 
     const inside = await child<FileSystemDirectoryEntry>(entry, 'tasks', 'getDirectory');
-    await walk(inside ?? entry, 'tasks');
+    // Same guard as the handle walk, and needed more here: this is the door a
+    // dropped folder takes on Firefox and Safari, where nothing asked the reader
+    // to confirm a file count first.
+    const holdsTasks = async () => {
+        for (const found of await read(entry)) {
+            if (!found.isDirectory) continue;
+            if (await child<FileSystemFileEntry>(found as FileSystemDirectoryEntry, 'TASK.md', 'getFile')) {
+                return true;
+            }
+        }
+        return false;
+    };
+    if (inside || (await holdsTasks())) await walk(inside ?? entry, 'tasks');
 
     if (inside) {
         const git = await child<FileSystemDirectoryEntry>(entry, '.git', 'getDirectory');

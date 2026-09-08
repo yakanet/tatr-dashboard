@@ -116,6 +116,20 @@
 			{#if repo.refreshFailure}
 				<span class="stale">· not refreshed: {repo.refreshFailure.message}</span>
 			{/if}
+			<!-- What the reading could not use. Said here because it is a fact about
+			     the reading rather than about a view, and because a count that does
+			     not match `tatr ls` is worse than a count with a reason beside it.
+			     The folders and the reasons are in the tooltip: naming them on the
+			     header would push the whole line around for a case that is rare. -->
+			{#if repo.skipped.length > 0}
+				<span
+					class="stale"
+					title={repo.skipped.map((one) => `${one.id}: ${one.reason}`).join('\n')}
+				>
+					· {repo.skipped.length}
+					{repo.skipped.length === 1 ? 'folder' : 'folders'} skipped
+				</span>
+			{/if}
 		</span>
 		{#if repeatable}
 			<button class="action" onclick={() => repo.load(ref, true)}>Refresh</button>

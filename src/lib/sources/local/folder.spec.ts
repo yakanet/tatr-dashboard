@@ -132,6 +132,34 @@ describe('fromDirectoryHandle', () => {
 		]);
 	});
 
+	it('refuses a folder that is neither a repository nor a tasks folder', async () => {
+		// The case that made a mispicked folder cost minutes: everything below it
+		// was walked under a `tasks/` prefix, which then read to the loader as a
+		// tasks folder holding no tasks.
+		const folder = await fromDirectoryHandle(
+			directory('Documents', {
+				'notes/shopping.md': 'milk',
+				'photos/a.png': 'png',
+				'README.md': '# not a repository\n'
+			})
+		);
+		expect([...folder.files.keys()]).toEqual([]);
+		expect(folder.name).toBe('Documents');
+	});
+
+	it('accepts the tasks folder itself, which holds task folders', async () => {
+		const folder = await fromDirectoryHandle(
+			directory('tasks', {
+				'20260101-000001/TASK.md': '# a\n',
+				'20260101-000001/shot.png': 'png'
+			})
+		);
+		expect([...folder.files.keys()].toSorted()).toEqual([
+			'tasks/20260101-000001/TASK.md',
+			'tasks/20260101-000001/shot.png'
+		]);
+	});
+
 	it('descends `tasks/` and nothing else', async () => {
 		// Walking everything and filtering after would mean reading `node_modules`
 		// and every loose object under `.git` to arrive at the same files.
@@ -373,5 +401,24 @@ describe('fromDirectoryEntry', () => {
 			'tasks/20260101-000001/TASK.md',
 			'tasks/tags'
 		]);
+	});
+});
+
+describe('a dropped folder that holds no tasks', () => {
+	// The widest door, and the one with no dialog in front of it: on Firefox and
+	// Safari a drop hands over the legacy entry tree, so nothing asked the reader
+	// to confirm a file count before this walk began.
+	it('is read as empty rather than walked whole', async () => {
+		const folder = await fromDirectoryEntry(
+			entryTree('Downloads', { 'invoices/march.pdf': 'pdf', 'notes.txt': 'x' })
+		);
+		expect([...folder.files.keys()]).toEqual([]);
+	});
+
+	it('still accepts a dropped tasks folder', async () => {
+		const folder = await fromDirectoryEntry(
+			entryTree('tasks', { '20260101-000001/TASK.md': '# a\n' })
+		);
+		expect([...folder.files.keys()]).toEqual(['tasks/20260101-000001/TASK.md']);
 	});
 });
