@@ -197,7 +197,7 @@
 				<ul class="tasks">
 					{#each top as task (task.id)}
 						<li>
-							<span class="prio mono">{task.priority}</span>
+							<span class="prio">{task.priority}</span>
 							<a class="title" href={taskHref(task.id)} data-key-row
 								>{@html inline(task.title, task.id)}</a>
 							{#each task.tags as tag (tag)}
@@ -215,16 +215,10 @@
 <style>
 	main {
 		max-width: 64rem;
-		margin: 0 auto;
 		padding: 1.25rem 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.mono {
-		font-family: var(--font-mono);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.masthead {
@@ -297,9 +291,6 @@
 	}
 
 	.panel {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
 		padding: 1rem 1.15rem;
 	}
 
@@ -487,9 +478,6 @@
 	}
 
 	.prio {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--accent-text);
 		width: 2.4rem;
 		text-align: right;
 	}
@@ -503,20 +491,7 @@
 		color: var(--accent-text);
 	}
 
-	.title :global(code) {
-		font-family: var(--font-mono);
-		font-size: 0.85em;
-		color: var(--ink-2);
-	}
-
 	.tag {
-		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		color: var(--ink-2);
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 0.2rem;
-		padding: 0 0.35rem;
 		cursor: pointer;
 	}
 
@@ -531,9 +506,4 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	.empty {
-		margin: 0;
-		font-size: 0.8rem;
-		color: var(--ink-2);
-	}
 </style>

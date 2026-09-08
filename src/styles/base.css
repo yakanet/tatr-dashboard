@@ -1,0 +1,44 @@
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: var(--font-sans);
+	line-height: 1.5;
+}
+
+a {
+	color: var(--accent-text);
+	text-decoration: none;
+}
+
+a:hover {
+	color: var(--accent-strong);
+}
+
+/* Monospace is reserved for repository content: ids, tags, priorities,
+   queries, property keys and file names. */
+code,
+kbd,
+samp {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+}
+
+/* Only columns that align vertically get equal-width digits. */
+.tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Display face for headings and the masthead figure. */
+h1,
+h2,
+.display {
+	font-family: var(--font-display);
+	letter-spacing: -0.025em;
+}
+
+/* Every view centres one column and chooses its own width, so only the
+   centring is shared. */
+main {
+	margin: 0 auto;
+}

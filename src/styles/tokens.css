@@ -1,0 +1,85 @@
+/*
+ * Design tokens.
+ *
+ * Surfaces and ink are a selected pair rather than an inversion, and the data
+ * colours were validated rather than eyeballed: open-vs-closed clears CVD
+ * separation and 3:1 contrast against both surfaces.
+ */
+:root {
+	--font-display: 'Bricolage Grotesque', 'IBM Plex Sans', system-ui, sans-serif;
+	--font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	/* Surfaces and ink — a warm cream ground, not a neutral one */
+	--bg: #fbf8f4;
+	--surface: #ffffff;
+	--border: #e6ded4;
+	--baseline: #cfc3b6;
+	--muted: #93877c;
+	--ink-2: #6d635a;
+	--fg: #171310;
+
+	--accent: #ff3e00;
+	--on-accent: #1c1512;
+	--accent-text: #c8330b;
+	--accent-strong: #a72907;
+	--accent-wash: #fff0ea;
+	--accent-line: #fec9bc;
+
+	--series-open: #ff3e00;
+	--series-closed: #898781;
+
+	/* Status. Always shipped with an icon and a label — with an orange brand,
+	   the error red sits close enough that colour alone cannot carry it. */
+	--good: #0ca30c;
+	--warning: #fab219;
+	--danger: #a4151a;
+
+	color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--bg: #17120f;
+		--surface: #211a16;
+		--border: #322721;
+		--baseline: #453830;
+		--muted: #93877c;
+		--ink-2: #b8aba0;
+		--fg: #f5efe9;
+
+		--accent: #ff3e00;
+		--on-accent: #1c1512;
+		--accent-text: #fd8266;
+		--accent-strong: #fd8266;
+		--accent-wash: #3d1b14;
+		--accent-line: #892c17;
+
+		--series-open: #ff3e00;
+		--danger: #e5484d;
+
+		color-scheme: dark;
+	}
+}
+
+:root[data-theme='dark'] {
+	--bg: #17120f;
+	--surface: #211a16;
+	--border: #322721;
+	--baseline: #453830;
+	--muted: #93877c;
+	--ink-2: #b8aba0;
+	--fg: #f5efe9;
+
+	--accent: #ff3e00;
+	--on-accent: #1c1512;
+	--accent-text: #fd8266;
+	--accent-strong: #fd8266;
+	--accent-wash: #3d1b14;
+	--accent-line: #892c17;
+
+	--series-open: #ff3e00;
+	--danger: #e5484d;
+
+	color-scheme: dark;
+}

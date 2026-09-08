@@ -219,7 +219,6 @@
 <style>
 	main {
 		max-width: 38rem;
-		margin: 0 auto;
 		padding: clamp(3rem, 12vh, 7rem) 1.5rem 4rem;
 	}
 

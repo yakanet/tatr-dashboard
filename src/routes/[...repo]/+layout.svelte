@@ -118,7 +118,7 @@
 			{/if}
 		</span>
 		{#if repeatable}
-			<button onclick={() => repo.load(ref, true)}>Refresh</button>
+			<button class="action" onclick={() => repo.load(ref, true)}>Refresh</button>
 		{:else}
 			<!-- A reading that cannot be taken again: a directory input hands over
 			     files and no way back to the folder they came from, so refreshing
@@ -193,15 +193,4 @@
 		color: var(--warning);
 	}
 
-	button {
-		padding: 0.3rem 0.8rem;
-		font: inherit;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--on-accent);
-		background: var(--accent);
-		border: 1px solid var(--accent);
-		border-radius: 0.3rem;
-		cursor: pointer;
-	}
 </style>

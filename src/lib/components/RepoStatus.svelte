@@ -67,7 +67,7 @@
 			{#if isLocal(ref)}
 				<FolderPicker label="Choose a folder…" />
 			{:else}
-				<button onclick={() => repo.load(ref, true)}>Try again</button>
+				<button class="action" onclick={() => repo.load(ref, true)}>Try again</button>
 			{/if}
 			<a href={resolve('/')}>Another repository</a>
 		</div>
@@ -76,9 +76,6 @@
 
 <style>
 	.panel {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
 		padding: 1.1rem 1.25rem;
 	}
 
@@ -151,15 +148,4 @@
 		margin-top: 0.75rem;
 	}
 
-	button {
-		padding: 0.3rem 0.8rem;
-		font: inherit;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--on-accent);
-		background: var(--accent);
-		border: 1px solid var(--accent);
-		border-radius: 0.3rem;
-		cursor: pointer;
-	}
 </style>

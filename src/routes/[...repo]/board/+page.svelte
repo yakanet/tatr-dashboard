@@ -89,7 +89,7 @@
 									<!-- The card is the link, so `j`/`k` and Enter carry the board
 									     without a line of its own. -->
 									<a href={taskHref(task.id)} data-key-row class:done={column.key === 'done'}>
-										<span class="prio mono" class:muted={column.key === 'done'}>
+										<span class="prio" class:muted={column.key === 'done'}>
 											{task.priority}
 										</span>
 										<span class="title">{@html inline(task)}</span>
@@ -99,7 +99,7 @@
 													<span data-moved title={repo.describeMoves(moves)}>{moves[0]}</span>
 												{/if}
 												{#each task.tags as tag (tag)}
-													<span class="tag mono" title={describe(tag)}>{tag}</span>
+													<span class="tag" title={describe(tag)}>{tag}</span>
 												{/each}
 											</span>
 										{/if}
@@ -117,7 +117,6 @@
 <style>
 	main {
 		max-width: 84rem;
-		margin: 0 auto;
 		padding: 1.5rem 1.5rem 4rem;
 	}
 
@@ -220,12 +219,6 @@
 		background: none;
 	}
 
-	.prio {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--accent-text);
-	}
-
 	.prio.muted {
 		color: var(--muted);
 	}
@@ -248,22 +241,11 @@
 
 	.tag {
 		font-size: 0.68rem;
-		color: var(--ink-2);
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 0.2rem;
 		padding: 0 0.25rem;
 	}
 
 	.empty {
 		margin: 0.75rem 0.15rem 0;
-		font-size: 0.8rem;
-		color: var(--muted);
 	}
 
-	.title :global(code) {
-		font-family: var(--font-mono);
-		font-size: 0.85em;
-		color: var(--ink-2);
-	}
 </style>

@@ -324,10 +324,6 @@
 		padding: 0 0.25rem;
 	}
 
-	.mono {
-		font-family: var(--font-mono);
-	}
-
 	.count {
 		font-family: var(--font-mono);
 		font-size: 0.75rem;

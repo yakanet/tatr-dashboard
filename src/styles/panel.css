@@ -1,0 +1,13 @@
+/*
+ * A panel: the one surface this site draws things on.
+ *
+ * Global rather than repeated per view because Svelte's scoped CSS does not
+ * cross a component, and four copies had drifted into three paddings — which
+ * a reader could see. What stays local is the padding itself: a status note, a
+ * dashboard card and a task's article are the same surface at three densities.
+ */
+.panel {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 0.375rem;
+}

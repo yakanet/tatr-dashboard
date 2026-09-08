@@ -1,0 +1,78 @@
+/*
+ * How repository content is set: monospace, because it is a name someone typed
+ * into a file rather than prose this site wrote.
+ *
+ * `.mono` was declared in two components and *applied* in five, which is a
+ * class of mistake scoped CSS makes silently — the markup asked for a rule the
+ * component did not have, so a board's priorities and tags, a file's size and a
+ * repository's path all rendered in the body face while the list's rendered
+ * right. One rule, once.
+ */
+.mono {
+	font-family: var(--font-mono);
+}
+
+/* A tag, as the format writes it. Clickable in the list and on the dashboard,
+   inert on a board card — which is why the cursor is not here. */
+.tag {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	color: var(--ink-2);
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: 0.2rem;
+	padding: 0 0.35rem;
+}
+
+/* A priority: a number to compare down a column, so it is tabular as well as
+   monospace. */
+.prio {
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--accent-text);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Inline code inside a rendered title — task titles carry it constantly
+   (`` `tatr ls` relative paths are broken ``), and it has to stay quieter than
+   the title around it. */
+.title code {
+	font-family: var(--font-mono);
+	font-size: 0.85em;
+	color: var(--ink-2);
+}
+
+/* What a view says when a query matches nothing. */
+.empty {
+	margin: 0;
+	font-size: 0.8rem;
+	color: var(--ink-2);
+}
+
+/* How a row says it moved since the reader's last reading, in the list and on
+   the board's cards alike — one word, beside the title it belongs to.
+
+   Not a band on the row: that already means "the keyboard is here", and two
+   meanings on one channel is one too many. Here rather than in each view for the
+   same reason as the rules above, one convention being one rule. */
+[data-moved] {
+	padding: 0.05rem 0.3rem;
+	font-size: 0.7rem;
+	font-weight: 500;
+	color: var(--accent-text);
+	background: var(--accent-wash);
+	border: 1px solid var(--accent-line);
+	border-radius: 0.2rem;
+	white-space: nowrap;
+}
+
+/* An SVG node draws its own focus, on the circle rather than around the link. */
+svg a[data-key-focus] circle {
+	stroke: var(--accent-text);
+	stroke-width: 3;
+}
+
+svg a[data-key-focus] {
+	outline: none;
+}

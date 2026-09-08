@@ -249,7 +249,6 @@
 <style>
 	main {
 		max-width: 68rem;
-		margin: 0 auto;
 		padding: 2.5rem 1.5rem 4rem;
 	}
 

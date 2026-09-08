@@ -64,7 +64,7 @@
 			{/each}
 		</p>
 
-		<button type="button" onclick={onclose}>Close</button>
+		<button type="button" class="action" onclick={onclose}>Close</button>
 	</div>
 </div>
 
@@ -82,8 +82,6 @@
 	.panel {
 		width: min(26rem, 100%);
 		padding: 1.25rem 1.5rem 1rem;
-		background: var(--surface);
-		border: 1px solid var(--border);
 		border-radius: 0.6rem;
 		box-shadow: 0 16px 48px rgb(0 0 0 / 0.3);
 		outline: none;
@@ -140,16 +138,7 @@
 		padding: 0.05rem 0.3rem;
 	}
 
-	button {
+	.action {
 		margin-top: 1rem;
-		padding: 0.3rem 0.8rem;
-		font: inherit;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--on-accent);
-		background: var(--accent);
-		border: 1px solid var(--accent);
-		border-radius: 0.3rem;
-		cursor: pointer;
 	}
 </style>
