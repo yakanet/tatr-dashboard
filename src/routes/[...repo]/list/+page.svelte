@@ -50,7 +50,7 @@
 		syncUrl();
 	}
 
-	const describe = (task: Task) => repo.tags.descriptions.get(task.tags[0] ?? '') ?? '';
+	const describe = (tag: string) => repo.tags.descriptions.get(tag) ?? '';
 	const taskHref = (id: string) =>
 		resolve('/[...repo]/task/[id]', { repo: formatRepoPath(ref), id });
 	const inline = (task: Task) =>
@@ -102,7 +102,7 @@
 							</td>
 							<td class="c-tags">
 								{#each task.tags as tag (tag)}
-									<button class="tag" onclick={() => toggleTag(tag)} title={describe(task)}>
+									<button class="tag" onclick={() => toggleTag(tag)} title={describe(tag)}>
 										{tag}
 									</button>
 								{/each}
@@ -117,18 +117,8 @@
 </main>
 
 <style>
-
-
-
-
-
-
-
-
-
 	main {
 		max-width: 70rem;
-		margin: 0 auto;
 		padding: 1.25rem 1.5rem;
 	}
 
@@ -198,14 +188,6 @@
 		color: var(--muted);
 	}
 
-	.prio {
-		font-family: var(--font-mono);
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--accent-text);
-		font-variant-numeric: tabular-nums;
-	}
-
 	.title {
 		line-height: 1.4;
 	}
@@ -218,21 +200,7 @@
 		color: var(--accent-text);
 	}
 
-
-	.title :global(code) {
-		font-family: var(--font-mono);
-		font-size: 0.85em;
-		color: var(--ink-2);
-	}
-
 	.tag {
-		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		color: var(--ink-2);
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 0.2rem;
-		padding: 0 0.35rem;
 		margin-right: 0.25rem;
 		cursor: pointer;
 	}
@@ -246,11 +214,6 @@
 		font-size: 0.7rem;
 		color: var(--muted);
 		font-variant-numeric: tabular-nums;
-	}
-
-	.empty {
-		font-size: 0.875rem;
-		color: var(--ink-2);
 	}
 
 	.sr {

@@ -31,6 +31,11 @@
 		if (!current) return;
 		if (current.description !== undefined) {
 			body = current.description;
+			// Reachable while a fetch is in flight: a refresh replaces the task
+			// with one that carries its description, and this branch is what the
+			// next run takes. Without the reset the page keeps saying it is
+			// reading a body it already has.
+			loadingBody = false;
 			return;
 		}
 		loadingBody = true;
@@ -144,7 +149,6 @@
 							class:last={index === entries.length - 1}
 						>
 							<span class="bullet"></span>
-							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							<div class="prose">{@html render(entry)}</div>
 						</div>
 					{/each}
@@ -233,7 +237,6 @@
 <style>
 	main {
 		max-width: 70rem;
-		margin: 0 auto;
 		padding: 1.5rem;
 		display: grid;
 		grid-template-columns: 1fr 18rem;
@@ -247,9 +250,6 @@
 	}
 
 	.panel {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
 		padding: 1.25rem 1.5rem;
 	}
 
