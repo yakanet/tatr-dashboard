@@ -113,11 +113,11 @@ behind the same IP address, so:
   repositories that still call it `master`.
 - **Contents come from a CDN.** `raw.githubusercontent.com` does not count
   against the API quota at all.
-- **Hitting the limit anyway is not the end.** The page asks `ungh.cc`, which
-  proxies the same API with its own credentials, rather than showing you an
-  error. That is the only request this site makes to anyone but GitHub, it
-  carries nothing but the repository name, and it happens only when the budget
-  is already spent.
+- **A spent budget gets one more chance.** The page asks `ungh.cc`, which
+  proxies the same API with its own credentials, before giving up. One mirror,
+  not a chain of them: it is the only request this site makes to anyone but
+  GitHub, it carries nothing but the repository name, and it happens only once
+  the budget is gone.
 - **A refresh that fails costs you nothing.** The reading you were looking at
   stays on screen and the header says it was not renewed, rather than trading a
   true copy for an error page.
@@ -151,14 +151,19 @@ Chromium today and which Brave ships turned off. The directory input, everywhere
 else, hands over one snapshot, and refreshing means picking again — which the
 button says instead of pretending.
 
-Either way your browser asks first, and the two ask differently — so the page
+Two of the three ask your permission, and they ask differently — so the page
 says which one is coming before you click. The picker asks for access to that
 one folder. The directory input asks by the _file count_, because it cannot know
 that this page will not upload what it is given: a whole checkout produces
 _"import 7,775 files?"_, most of which is `node_modules`, and all but the
 `tasks/` folder is discarded on arrival. Picking `tasks/` directly is accepted
 for exactly that reason, and costs only the branch name, which lives in
-`.git/HEAD` one level up.
+`.git/HEAD` one level up. A drop asks nothing, the drop being the gesture
+itself.
+
+Whichever door it came through, a folder with no tasks in it is told so rather
+than trawled: the reader picked a folder, and the page can see in one look
+whether it holds task folders.
 
 ## Identical to the CLI — and that claim is tested
 

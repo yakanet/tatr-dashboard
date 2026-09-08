@@ -189,3 +189,33 @@ wrapped an object's method spy on the function itself — shorter, and asking th
 same question. 584 tests unchanged, `svelte-check` at zero, and the module count
 of `sources/` down by one.
 
+---
+
+The README was re-read against the code, at the reader's prompting, and it was
+wrong in two ways — one of them worse than a stale sentence.
+
+The count contradicted itself. "The widest door of the three" opened the local
+section, and two paragraphs later "Either way your browser asks first, and the
+two ask differently — so the page says which one is coming before you click".
+Three doors, then two, and a click that does not exist: a drop asks nothing,
+the drop *being* the gesture. Now two of the three ask, the drop says so, and
+the section also states what tonight's guard does — a folder with no tasks in it
+is told so rather than trawled.
+
+And the mirror bullet promised more than one mirror can. "Hitting the limit
+anyway is not the end" was written when there were two; with ungh alone it is
+one more chance, not a guarantee, and it now says so.
+
+The worse fault was in the pictures. All three screenshots showed a header with
+**two** views, Overview and List — they predate the board and the graph, and the
+brand mark. So the README's shop window displayed a product from two weeks ago
+while its own table listed six URLs. Retaken at the same framings (1400×868,
+1400×545, 1400×330) on the same repository and the same query, so only the
+product differs: four views, the mark, and the Source panel that links a task to
+its file on the forge.
+
+Verified as correct, having been checked rather than assumed: the 64 rows and 34
+query invocations against the fixtures, the 60 requests an hour, `1`-`4`
+switching among exactly four views, the `404.html` the build emits, and every
+query in the table appearing in the CLI replay.
+
