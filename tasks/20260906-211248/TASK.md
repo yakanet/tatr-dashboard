@@ -50,3 +50,13 @@ Bytes on the wire are roughly unchanged either way: Google already serves latin
 subsets of comparable size. What self-hosting buys is two fewer third-party
 connections and no render dependency on a CDN we do not control; what it costs
 is about 130 kB in the repository and in the build.
+
+---
+
+Licensing, since it lands with the files rather than after them: IBM Plex and
+Bricolage Grotesque are under the SIL Open Font License, which asks that its
+notice travel with the fonts. Self-hosting means shipping the faces in this
+repository, so their notices belong in `NOTICE` beside the fixtures' — the file
+that already exists for exactly this, now that the repository is MIT with
+stated exceptions.
+

@@ -180,6 +180,10 @@ A divergence fails the suite. The same discipline governs what reaches the
 screen: repository content is shown **verbatim**, typos and straight quotes
 included, because polishing it would show a screen the product cannot produce.
 
+Those recordings carry upstream's own task text, which makes them the one thing
+in this repository that is not MIT — see [`NOTICE`](NOTICE). No code from tatr is
+copied here; the viewer is an independent implementation of the same format.
+
 ![One task, rendered](docs/task.jpg)
 
 ## Built with

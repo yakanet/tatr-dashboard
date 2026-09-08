@@ -1,0 +1,42 @@
+Third-party content in this repository
+======================================
+
+Everything here is under the MIT licence in LICENSE, with one exception: the
+recordings under tests/fixtures/, which are not this project's to relicense.
+
+
+tests/fixtures/
+---------------
+
+These files are recordings of the reference implementation's behaviour, made by
+running the real `tatr` binary over the 64 tasks of its own repository:
+
+  tsoding-tatr-raw.json   the complete text of those 64 TASK.md files
+  tatr-ls-output.json     their ids, titles, statuses, priorities and tags
+  tsoding-tatr.json       the same fields, from a second invocation
+  tatr-graph-edges.json   the task ids they cite, as pairs
+  tql-cli-cases.json      34 queries, and the ids the CLI printed for each
+  tatr-query-errors.json  invalid queries, and the diagnostics the CLI printed
+
+The task text, the titles and the diagnostics in them are the work of the
+authors of tatr <https://github.com/tsoding/tatr> and are covered by that
+project's licence, the GNU General Public License version 2. They are kept here
+as test data, and they earn their place: the suite replays them field by field,
+so a divergence between this viewer and the reference implementation fails the
+build rather than reaching a reader.
+
+Two smaller quotations, for completeness. src/lib/tatr/board.ts quotes one
+sentence of an upstream task in a comment, as the reason a decision was made;
+the README quotes upstream typos to explain why repository content is shown
+verbatim. Both are attributed where they appear.
+
+
+What is not borrowed
+--------------------
+
+No source code from tatr is copied into this repository. This viewer is an
+independent implementation, in TypeScript, of the same file format and the same
+query language — a format and a behaviour rather than an expression. Where a
+comment says a function is "ported from" a file of the C source, it means the
+behaviour was reproduced by reading that source; what holds the two together is
+the differential tests above, not shared code.
