@@ -63,7 +63,6 @@ export class RepositoryState {
 	readonly name = $derived(this.label || (this.ref ? describeRef(this.ref) : ''));
 
 	readonly open = $derived(this.tasks.filter((task) => !task.closed));
-	readonly closed = $derived(this.tasks.filter((task) => task.closed));
 
 	/**
 	 * What moved since the reader's last reading, or null when there is nothing
@@ -88,8 +87,15 @@ export class RepositoryState {
 
 		// Only a refresh over a reading has something to protect: from `failed`, or
 		// from another repository, there is nothing on screen worth keeping.
+		//
+		// Both reads are behind `refresh` on purpose. This method is called from
+		// an effect, so a read here makes that effect depend on state this same
+		// method then writes — and `previous` is written a few lines down. Read
+		// unconditionally, it re-ran the effect, whose cleanup aborted the reading
+		// in flight, which left the page on its loading screen forever: exactly as
+		// long as a cached comparison kept the value changing.
 		const standing = refresh && this.phase === 'ready';
-		const held = this.previous;
+		const held = standing ? this.previous : null;
 
 		this.ref = ref;
 		this.phase = 'listing';
