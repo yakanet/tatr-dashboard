@@ -8,7 +8,10 @@ const all = Object.entries(sources).map(([id, source]) => readTask(id, source)!)
 const open = all.filter((task) => !task.closed);
 
 const make = (id: string, priority: number, tags: string[], closed = false): Task =>
-	readTask(id, `# t\n\n- STATUS: ${closed ? 'CLOSED' : 'OPEN'}\n- PRIORITY: ${priority}\n- TAGS: ${tags.join(',')}\n`)!;
+	readTask(
+		id,
+		`# t\n\n- STATUS: ${closed ? 'CLOSED' : 'OPEN'}\n- PRIORITY: ${priority}\n- TAGS: ${tags.join(',')}\n`
+	)!;
 
 describe('counts', () => {
 	it('matches the real repository', () => {

@@ -72,7 +72,11 @@ export class NoTasksFolderError extends Error {
 }
 
 /** Runs `worker` over `items` with a bounded number in flight. */
-async function pooled<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+async function pooled<T, R>(
+	items: T[],
+	limit: number,
+	worker: (item: T) => Promise<R>
+): Promise<R[]> {
 	const results = new Array<R>(items.length);
 	let next = 0;
 
@@ -182,11 +186,15 @@ export async function loadRepository(ref: RepoRef, options: LoadOptions = {}): P
 	}
 
 	let done = 0;
-	const contents = await pooled(taskFiles, options.concurrency ?? source.concurrency, async (entry) => {
-		const text = await source.read(entry.path, options.signal);
-		options.onProgress?.(++done, taskFiles.length);
-		return { path: entry.path, text };
-	});
+	const contents = await pooled(
+		taskFiles,
+		options.concurrency ?? source.concurrency,
+		async (entry) => {
+			const text = await source.read(entry.path, options.signal);
+			options.onProgress?.(++done, taskFiles.length);
+			return { path: entry.path, text };
+		}
+	);
 
 	// Tag descriptions are optional, and their absence is not an error.
 	const tagsFile = listing.entries.some((entry) => entry.path === 'tasks/tags')

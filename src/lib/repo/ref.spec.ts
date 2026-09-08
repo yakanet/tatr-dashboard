@@ -51,12 +51,9 @@ describe('parseRepoPath', () => {
 		});
 	});
 
-	it.each(['', '/', 'tsoding', 'a/b/c', 'tsoding/', 'tsoding/ta tr'])(
-		'rejects %o',
-		(input) => {
-			expect(parseRepoPath(input)).toBeNull();
-		}
-	);
+	it.each(['', '/', 'tsoding', 'a/b/c', 'tsoding/', 'tsoding/ta tr'])('rejects %o', (input) => {
+		expect(parseRepoPath(input)).toBeNull();
+	});
 });
 
 describe('parseRepoInput', () => {

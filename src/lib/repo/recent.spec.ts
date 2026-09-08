@@ -58,10 +58,7 @@ describe('toSuggestions', () => {
 	});
 
 	it('keeps the order it was given, the store having sorted it', () => {
-		const found = suggest([
-			row('github.com/a/one@', 0, 1, 30),
-			row('github.com/b/two@', 0, 1, 20)
-		]);
+		const found = suggest([row('github.com/a/one@', 0, 1, 30), row('github.com/b/two@', 0, 1, 20)]);
 		expect(found.map((one) => one.path)).toEqual(['a/one', 'b/two']);
 	});
 

@@ -90,9 +90,7 @@ describe('provider fallback', () => {
 	it('does not ask the others when the repository does not exist', async () => {
 		const second = fakeProvider();
 		const spy = vi.spyOn(second, 'list');
-		await expect(list([failing('github', 'not-found'), second])).rejects.toThrow(
-			ProviderError
-		);
+		await expect(list([failing('github', 'not-found'), second])).rejects.toThrow(ProviderError);
 		expect(spy).not.toHaveBeenCalled();
 	});
 
@@ -215,10 +213,18 @@ describe('caching', () => {
 		const provider = fakeProvider();
 		const spy = vi.spyOn(provider, 'list');
 
-		const first = await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, store });
+		const first = await loadRepository(ref, {
+			providers: [provider],
+			fetchImpl: fetchFixture,
+			store
+		});
 		expect(first.fromCache).toBe(false);
 
-		const second = await loadRepository(ref, { providers: [provider], fetchImpl: fetchFixture, store });
+		const second = await loadRepository(ref, {
+			providers: [provider],
+			fetchImpl: fetchFixture,
+			store
+		});
 		expect(second.fromCache).toBe(true);
 		expect(second.tasks).toHaveLength(64);
 		// The listing is the only rate-limited call; it must not happen twice.
@@ -444,7 +450,10 @@ describe('a folder on this machine', () => {
 	};
 
 	const task = (id: string, priority: number, status = 'OPEN') =>
-		dropped(`tasks/${id}/TASK.md`, `# ${id}\n\n- STATUS: ${status}\n- PRIORITY: ${priority}\n- TAGS: ui\n`);
+		dropped(
+			`tasks/${id}/TASK.md`,
+			`# ${id}\n\n- STATUS: ${status}\n- PRIORITY: ${priority}\n- TAGS: ui\n`
+		);
 
 	afterEach(() => closeFolder());
 
@@ -483,7 +492,10 @@ describe('a folder on this machine', () => {
 	});
 
 	it('names the checked-out branch, or says it is a working tree', async () => {
-		const withHead = open([task('20260101-000001', 90), dropped('.git/HEAD', 'ref: refs/heads/wip\n')]);
+		const withHead = open([
+			task('20260101-000001', 90),
+			dropped('.git/HEAD', 'ref: refs/heads/wip\n')
+		]);
 		expect((await loadRepository(withHead, { store })).branch).toBe('wip');
 		expect((await loadRepository(open([task('20260101-000001', 90)]), { store })).branch).toBe(
 			'working tree'

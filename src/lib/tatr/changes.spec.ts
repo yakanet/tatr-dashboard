@@ -116,5 +116,4 @@ describe('compare', () => {
 		const changes = compare(before([]), [open, make('20260202-000002', 50, [])]);
 		expect([...changes.moved.values()]).toEqual([['new'], ['new']]);
 	});
-
 });

@@ -169,7 +169,10 @@ function describe(error: unknown): Failure {
 	if (error instanceof ProviderError) {
 		return { kind: error.failure, message: error.message };
 	}
-	return { kind: 'unknown', message: error instanceof Error ? error.message : 'Something went wrong' };
+	return {
+		kind: 'unknown',
+		message: error instanceof Error ? error.message : 'Something went wrong'
+	};
 }
 
 /**

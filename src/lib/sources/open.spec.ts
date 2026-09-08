@@ -87,13 +87,12 @@ describe('reading through a forge', () => {
 
 		const source = openSource(ref, { fetchImpl })!;
 		expect(await source.read('tasks/a/TASK.md')).toBe('# a task\n');
-		expect(asked).toEqual([
-			'https://raw.githubusercontent.com/tsoding/tatr/HEAD/tasks/a/TASK.md'
-		]);
+		expect(asked).toEqual(['https://raw.githubusercontent.com/tsoding/tatr/HEAD/tasks/a/TASK.md']);
 	});
 
 	it('answers null for a file the CDN refuses, rather than throwing', async () => {
-		const fetchImpl = (async () => new Response('nope', { status: 404 })) as unknown as typeof fetch;
+		const fetchImpl = (async () =>
+			new Response('nope', { status: 404 })) as unknown as typeof fetch;
 		expect(await openSource(ref, { fetchImpl })!.read('tasks/a/TASK.md')).toBeNull();
 	});
 

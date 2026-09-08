@@ -20,9 +20,7 @@ describe('the URL of a file', () => {
 		// `feature%2Fweb-ui` is a branch of that literal name, which nobody has, so
 		// encoding the whole thing at once made every read of such a repository
 		// fail.
-		expect(open(ref, 'feature/web-ui').assetUrl(path)).toContain(
-			'/tatr/feature/web-ui/tasks/'
-		);
+		expect(open(ref, 'feature/web-ui').assetUrl(path)).toContain('/tatr/feature/web-ui/tasks/');
 	});
 
 	it('encodes what a segment cannot carry', () => {
@@ -46,9 +44,7 @@ describe('the URL of its page on the forge', () => {
 	});
 
 	it('keeps a branch with slashes, as the raw URL does', () => {
-		expect(open(ref, 'feature/web-ui').fileUrl?.(path)).toContain(
-			'/blob/feature/web-ui/tasks/'
-		);
+		expect(open(ref, 'feature/web-ui').fileUrl?.(path)).toContain('/blob/feature/web-ui/tasks/');
 	});
 });
 

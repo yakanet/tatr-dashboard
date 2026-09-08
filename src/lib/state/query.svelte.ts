@@ -102,6 +102,9 @@ export class QueryState {
 	}
 
 	has(term: string): boolean {
-		return this.text.trim().split(/\s+and\s+/).includes(term);
+		return this.text
+			.trim()
+			.split(/\s+and\s+/)
+			.includes(term);
 	}
 }

@@ -304,11 +304,7 @@ export function parseWithWarnings(source: string): ParseResult {
 
 	const trailing = peek();
 	if (trailing) {
-		throw new TqlError(
-			`Unexpected infix operator \`${trailing.text}\``,
-			trailing.span,
-			INFIX_HELP
-		);
+		throw new TqlError(`Unexpected infix operator \`${trailing.text}\``, trailing.span, INFIX_HELP);
 	}
 
 	return { node, warnings };

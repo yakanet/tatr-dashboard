@@ -33,9 +33,9 @@
  * would be a button that cannot work.
  */
 export function folderAccess(): 'picker' | 'input' | 'none' {
-    if (typeof window === 'undefined') return 'none';
-    if (typeof window.showDirectoryPicker === 'function') return 'picker';
-    return 'webkitdirectory' in document.createElement('input') ? 'input' : 'none';
+	if (typeof window === 'undefined') return 'none';
+	if (typeof window.showDirectoryPicker === 'function') return 'picker';
+	return 'webkitdirectory' in document.createElement('input') ? 'input' : 'none';
 }
 
 /**
@@ -47,17 +47,17 @@ export function folderAccess(): 'picker' | 'input' | 'none' {
  * a folder it can reread.
  */
 export function canDropFolder(): boolean {
-    if (typeof DataTransferItem === 'undefined') return false;
-    const item = DataTransferItem.prototype;
-    return 'getAsFileSystemHandle' in item || 'webkitGetAsEntry' in item;
+	if (typeof DataTransferItem === 'undefined') return false;
+	const item = DataTransferItem.prototype;
+	return 'getAsFileSystemHandle' in item || 'webkitGetAsEntry' in item;
 }
 
 /** A repository read from the disk, as much of it as this viewer looks at. */
 export interface LocalFolder {
-    /** The folder's own name, which is all the identity a local source has. */
-    name: string;
-    /** Repository-relative path to file, e.g. `tasks/20260907-011003/TASK.md`. */
-    files: Map<string, File>;
+	/** The folder's own name, which is all the identity a local source has. */
+	name: string;
+	/** Repository-relative path to file, e.g. `tasks/20260907-011003/TASK.md`. */
+	files: Map<string, File>;
 }
 
 /**
@@ -69,7 +69,7 @@ export interface LocalFolder {
  * file that says which branch is checked out.
  */
 export function isWorthKeeping(path: string): boolean {
-    return path.startsWith('tasks/') || path === '.git/HEAD';
+	return path.startsWith('tasks/') || path === '.git/HEAD';
 }
 
 /**
@@ -90,12 +90,12 @@ export function isWorthKeeping(path: string): boolean {
  * of task folders is a tasks folder.
  */
 export function looksLikeTasksFolder(paths: Iterable<string>): boolean {
-    let holdsTasks = false;
-    for (const path of paths) {
-        if (path.startsWith('tasks/')) return false;
-        if (/^[^/]+\/TASK\.md$/.test(path)) holdsTasks = true;
-    }
-    return holdsTasks;
+	let holdsTasks = false;
+	for (const path of paths) {
+		if (path.startsWith('tasks/')) return false;
+		if (/^[^/]+\/TASK\.md$/.test(path)) holdsTasks = true;
+	}
+	return holdsTasks;
 }
 
 /**
@@ -106,30 +106,30 @@ export function looksLikeTasksFolder(paths: Iterable<string>): boolean {
  * no handle to ask.
  */
 export function fromFileList(list: ArrayLike<File>): LocalFolder | null {
-    const inside = new Map<string, File>();
-    let name = '';
+	const inside = new Map<string, File>();
+	let name = '';
 
-    for (let i = 0; i < list.length; i++) {
-        const file = list[i];
-        const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
-        if (!relative) continue;
-        const cut = relative.indexOf('/');
-        if (cut === -1) continue;
-        if (!name) name = relative.slice(0, cut);
-        inside.set(relative.slice(cut + 1), file);
-    }
+	for (let i = 0; i < list.length; i++) {
+		const file = list[i];
+		const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+		if (!relative) continue;
+		const cut = relative.indexOf('/');
+		if (cut === -1) continue;
+		if (!name) name = relative.slice(0, cut);
+		inside.set(relative.slice(cut + 1), file);
+	}
 
-    if (!name) return null;
-    // Picking `tasks/` is the same repository seen one level down, and the paths
-    // are put back the way the rest of this viewer expects them.
-    const tasks = looksLikeTasksFolder(inside.keys());
-    const files = new Map<string, File>();
-    for (const [path, file] of inside) {
-        const full = tasks ? `tasks/${path}` : path;
-        if (isWorthKeeping(full)) files.set(full, file);
-    }
+	if (!name) return null;
+	// Picking `tasks/` is the same repository seen one level down, and the paths
+	// are put back the way the rest of this viewer expects them.
+	const tasks = looksLikeTasksFolder(inside.keys());
+	const files = new Map<string, File>();
+	for (const [path, file] of inside) {
+		const full = tasks ? `tasks/${path}` : path;
+		if (isWorthKeeping(full)) files.set(full, file);
+	}
 
-    return {name, files};
+	return { name, files };
 }
 
 /**
@@ -142,32 +142,32 @@ export function fromFileList(list: ArrayLike<File>): LocalFolder | null {
  * files. A handle can be asked for a path directly, so it is.
  */
 export async function fromDirectoryHandle(handle: FileSystemDirectoryHandle): Promise<LocalFolder> {
-    const files = new Map<string, File>();
+	const files = new Map<string, File>();
 
-    async function walk(dir: FileSystemDirectoryHandle, prefix: string): Promise<void> {
-        for await (const [name, entry] of dir.entries()) {
-            const path = `${prefix}/${name}`;
-            if (entry.kind === 'directory') await walk(entry, path);
-            else files.set(path, await entry.getFile());
-        }
-    }
+	async function walk(dir: FileSystemDirectoryHandle, prefix: string): Promise<void> {
+		for await (const [name, entry] of dir.entries()) {
+			const path = `${prefix}/${name}`;
+			if (entry.kind === 'directory') await walk(entry, path);
+			else files.set(path, await entry.getFile());
+		}
+	}
 
-    // A repository holds its tasks in `tasks/`; a folder that *is* that one holds
-    // them at its root. Either way they end up under `tasks/`, where the rest of
-    // this viewer looks for them.
-    const inside = await directoryOrNull(handle, 'tasks');
-    // And a folder that is neither is left alone. Without this the walk descended
-    // the whole selection under a `tasks/` prefix — `node_modules` included — and
-    // the loader, seeing paths that begin with `tasks/`, could not say there was
-    // no tasks folder: the reader waited, then read "0 tasks".
-    if (inside || (await holdsTaskFolders(handle))) await walk(inside ?? handle, 'tasks');
+	// A repository holds its tasks in `tasks/`; a folder that *is* that one holds
+	// them at its root. Either way they end up under `tasks/`, where the rest of
+	// this viewer looks for them.
+	const inside = await directoryOrNull(handle, 'tasks');
+	// And a folder that is neither is left alone. Without this the walk descended
+	// the whole selection under a `tasks/` prefix — `node_modules` included — and
+	// the loader, seeing paths that begin with `tasks/`, could not say there was
+	// no tasks folder: the reader waited, then read "0 tasks".
+	if (inside || (await holdsTaskFolders(handle))) await walk(inside ?? handle, 'tasks');
 
-    if (inside) {
-        const head = await fileOrNull(await directoryOrNull(handle, '.git'), 'HEAD');
-        if (head) files.set('.git/HEAD', head);
-    }
+	if (inside) {
+		const head = await fileOrNull(await directoryOrNull(handle, '.git'), 'HEAD');
+		if (head) files.set('.git/HEAD', head);
+	}
 
-    return {name: handle.name, files};
+	return { name: handle.name, files };
 }
 
 /**
@@ -180,35 +180,35 @@ export async function fromDirectoryHandle(handle: FileSystemDirectoryHandle): Pr
  * rather than a walk of everything beneath it.
  */
 async function holdsTaskFolders(dir: FileSystemDirectoryHandle): Promise<boolean> {
-    for await (const [, entry] of dir.entries()) {
-        if (entry.kind !== 'directory') continue;
-        if (await fileOrNull(entry, 'TASK.md')) return true;
-    }
-    return false;
+	for await (const [, entry] of dir.entries()) {
+		if (entry.kind !== 'directory') continue;
+		if (await fileOrNull(entry, 'TASK.md')) return true;
+	}
+	return false;
 }
 
 async function directoryOrNull(
-    dir: FileSystemDirectoryHandle,
-    name: string
+	dir: FileSystemDirectoryHandle,
+	name: string
 ): Promise<FileSystemDirectoryHandle | null> {
-    try {
-        return await dir.getDirectoryHandle(name);
-    } catch {
-        // Absent, or a file of that name: either way there is nothing to descend.
-        return null;
-    }
+	try {
+		return await dir.getDirectoryHandle(name);
+	} catch {
+		// Absent, or a file of that name: either way there is nothing to descend.
+		return null;
+	}
 }
 
 async function fileOrNull(
-    dir: FileSystemDirectoryHandle | null,
-    name: string
+	dir: FileSystemDirectoryHandle | null,
+	name: string
 ): Promise<File | null> {
-    if (!dir) return null;
-    try {
-        return await (await dir.getFileHandle(name)).getFile();
-    } catch {
-        return null;
-    }
+	if (!dir) return null;
+	try {
+		return await (await dir.getFileHandle(name)).getFile();
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -222,86 +222,88 @@ async function fileOrNull(
  * worked on a small folder and silently loses the rest of a real one.
  */
 export async function fromDirectoryEntry(entry: FileSystemDirectoryEntry): Promise<LocalFolder> {
-    const files = new Map<string, File>();
+	const files = new Map<string, File>();
 
-    // `Promise.withResolvers` rather than an executor: the paging loop below calls
-    // itself from inside the callback, which is exactly the shape that reads
-    // badly nested one level deeper inside `new Promise`.
-    const read = (dir: FileSystemDirectoryEntry) => {
-        const {promise, resolve, reject} = Promise.withResolvers<FileSystemEntry[]>();
-        const reader = dir.createReader();
-        const all: FileSystemEntry[] = [];
+	// `Promise.withResolvers` rather than an executor: the paging loop below calls
+	// itself from inside the callback, which is exactly the shape that reads
+	// badly nested one level deeper inside `new Promise`.
+	const read = (dir: FileSystemDirectoryEntry) => {
+		const { promise, resolve, reject } = Promise.withResolvers<FileSystemEntry[]>();
+		const reader = dir.createReader();
+		const all: FileSystemEntry[] = [];
 
-        const next = () => {
-            reader.readEntries((batch) => {
-                if (batch.length === 0) {
-                    return resolve(all);
-                }
-                all.push(...batch);
-                next();
-            }, reject);
-        }
+		const next = () => {
+			reader.readEntries((batch) => {
+				if (batch.length === 0) {
+					return resolve(all);
+				}
+				all.push(...batch);
+				next();
+			}, reject);
+		};
 
-        next();
-        return promise;
-    };
+		next();
+		return promise;
+	};
 
-    const child = <T extends FileSystemEntry>(
-        dir: FileSystemDirectoryEntry,
-        name: string,
-        kind: 'getDirectory' | 'getFile'
-    ) =>
-        new Promise<T | null>((resolve) => {
-            dir[kind](
-                name,
-                {},
-                (found) => resolve(found as T),
-                () => resolve(null)
-            );
-        });
+	const child = <T extends FileSystemEntry>(
+		dir: FileSystemDirectoryEntry,
+		name: string,
+		kind: 'getDirectory' | 'getFile'
+	) =>
+		new Promise<T | null>((resolve) => {
+			dir[kind](
+				name,
+				{},
+				(found) => resolve(found as T),
+				() => resolve(null)
+			);
+		});
 
-    const fileOf = (found: FileSystemFileEntry) =>
-        new Promise<File | null>((resolve) => found.file(resolve, () => resolve(null)));
+	const fileOf = (found: FileSystemFileEntry) =>
+		new Promise<File | null>((resolve) => found.file(resolve, () => resolve(null)));
 
-    async function walk(dir: FileSystemDirectoryEntry, prefix: string): Promise<void> {
-        for (const found of await read(dir)) {
-            const path = `${prefix}/${found.name}`;
-            if (found.isDirectory) await walk(found as FileSystemDirectoryEntry, path);
-            else {
-                const file = await fileOf(found as FileSystemFileEntry);
-                if (file) files.set(path, file);
-            }
-        }
-    }
+	async function walk(dir: FileSystemDirectoryEntry, prefix: string): Promise<void> {
+		for (const found of await read(dir)) {
+			const path = `${prefix}/${found.name}`;
+			if (found.isDirectory) await walk(found as FileSystemDirectoryEntry, path);
+			else {
+				const file = await fileOf(found as FileSystemFileEntry);
+				if (file) files.set(path, file);
+			}
+		}
+	}
 
-    const inside = await child<FileSystemDirectoryEntry>(entry, 'tasks', 'getDirectory');
-    // Same guard as the handle walk, and needed more here: this is the door a
-    // dropped folder takes on Firefox and Safari, where nothing asked the reader
-    // to confirm a file count first.
-    const holdsTasks = async () => {
-        for (const found of await read(entry)) {
-            if (!found.isDirectory) continue;
-            if (await child<FileSystemFileEntry>(found as FileSystemDirectoryEntry, 'TASK.md', 'getFile')) {
-                return true;
-            }
-        }
-        return false;
-    };
-    if (inside || (await holdsTasks())) await walk(inside ?? entry, 'tasks');
+	const inside = await child<FileSystemDirectoryEntry>(entry, 'tasks', 'getDirectory');
+	// Same guard as the handle walk, and needed more here: this is the door a
+	// dropped folder takes on Firefox and Safari, where nothing asked the reader
+	// to confirm a file count first.
+	const holdsTasks = async () => {
+		for (const found of await read(entry)) {
+			if (!found.isDirectory) continue;
+			if (
+				await child<FileSystemFileEntry>(found as FileSystemDirectoryEntry, 'TASK.md', 'getFile')
+			) {
+				return true;
+			}
+		}
+		return false;
+	};
+	if (inside || (await holdsTasks())) await walk(inside ?? entry, 'tasks');
 
-    if (inside) {
-        const git = await child<FileSystemDirectoryEntry>(entry, '.git', 'getDirectory');
-        const head = git && (await child<FileSystemFileEntry>(git, 'HEAD', 'getFile'));
-        const file = head && (await fileOf(head));
-        if (file) files.set('.git/HEAD', file);
-    }
+	if (inside) {
+		const git = await child<FileSystemDirectoryEntry>(entry, '.git', 'getDirectory');
+		const head = git && (await child<FileSystemFileEntry>(git, 'HEAD', 'getFile'));
+		const file = head && (await fileOf(head));
+		if (file) files.set('.git/HEAD', file);
+	}
 
-    return {name: entry.name, files};
+	return { name: entry.name, files };
 }
 
 /** Every task file the folder holds, in the shape a listing takes. */
 export function listFolder(folder: LocalFolder): { path: string; size: number }[] {
-    return [...folder.files].map(([path, file]) => ({path, size: file.size}));
+	return [...folder.files].map(([path, file]) => ({ path, size: file.size }));
 }
 
 /**
@@ -313,8 +315,8 @@ export function listFolder(folder: LocalFolder): { path: string; size: number }[
  * is not a branch and is left alone.
  */
 export async function readBranch(folder: LocalFolder): Promise<string | undefined> {
-    const head = folder.files.get('.git/HEAD');
-    if (!head) return undefined;
-    const match = /^ref:\s*refs\/heads\/(.+)$/m.exec((await head.text()).trim());
-    return match?.[1];
+	const head = folder.files.get('.git/HEAD');
+	if (!head) return undefined;
+	const match = /^ref:\s*refs\/heads\/(.+)$/m.exec((await head.text()).trim());
+	return match?.[1];
 }

@@ -121,3 +121,32 @@ SvelteKit's own convention, not a dangling mapping of ours — its `write_tsconf
 test app ships the same pair, and `svelte-kit sync` reads `imports` to write the
 tsconfig paths.
 
+---
+
+The indentation was one file out of step — 67 in tabs, one in spaces — and the
+answer was not to align that file by hand but to give the project back the
+formatter it had clearly once had. `sv add prettier` writes a config the code
+*already* obeyed: tabs, single quotes, no trailing commas, width 100. That the
+scaffold's defaults match this codebase exactly is what identifies them as its
+origin.
+
+The judgement is not in the config, it is in `.prettierignore`.
+
+`tasks/` is out: this folder is the backlog *and* the fixture the viewer is
+pointed at, so reflowing a task's prose would change what the screen shows —
+the one thing this project refuses to do to a repository it reads.
+`tests/fixtures/` is out: those are replays of the reference binary compared
+byte for byte, and regenerating them needs the checkout and a compiler, so a
+formatter must never be what changes them. `.claude/` and the build outputs
+follow.
+
+Left in: the README, at the price of one convention — prettier normalises
+`*emphasis*` to `_emphasis_`. Its tables come out aligned, which is worth more
+than the asterisks.
+
+39 files reformatted, 306 of those lines being the one file's spaces becoming
+tabs. Checked on screen and not only by the suite: the Svelte plugin reflows
+markup, and markup whitespace is significant — the space around an inline code
+span in a title, the gaps between the header's clauses. The list, the graph and
+the header all still read right.
+

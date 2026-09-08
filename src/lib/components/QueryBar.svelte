@@ -154,9 +154,7 @@
 				<!-- The grammar is small enough to print in full, which saves the
 				     reader guessing that comparisons are words and groups are
 				     brackets. -->
-				<p class="grammar mono">
-					~word &nbsp; priority lt 50 &nbsp; not tagged &nbsp; [ a or b ]
-				</p>
+				<p class="grammar mono">~word &nbsp; priority lt 50 &nbsp; not tagged &nbsp; [ a or b ]</p>
 				<!-- Said out loud, because a menu that answers the keyboard and never
 				     says so is a menu people reach for with the mouse. -->
 				<p class="keys">
@@ -168,10 +166,12 @@
 			</div>
 		{/if}
 	</div>
-	<span class="count"><strong>{matched}</strong> matched <span class="of">/ {pool} shown</span></span>
+	<span class="count"
+		><strong>{matched}</strong> matched <span class="of">/ {pool} shown</span></span
+	>
 	{#if closedToggle}
 		<label class="closed">
-			<input type="checkbox" bind:checked={query.showClosed} onchange={onchange} />
+			<input type="checkbox" bind:checked={query.showClosed} {onchange} />
 			closed
 		</label>
 	{/if}

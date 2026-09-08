@@ -202,9 +202,7 @@ describe('listFolder', () => {
 		const folder = await fromDirectoryHandle(
 			directory('repo', { 'tasks/20260101-000001/TASK.md': '# a task\n' })
 		);
-		expect(listFolder(folder)).toEqual([
-			{ path: 'tasks/20260101-000001/TASK.md', size: 9 }
-		]);
+		expect(listFolder(folder)).toEqual([{ path: 'tasks/20260101-000001/TASK.md', size: 9 }]);
 	});
 });
 
@@ -272,7 +270,7 @@ describe('picking the tasks folder itself', () => {
 		const folder = await fromDirectoryHandle(
 			directory('tasks', {
 				'20260101-000001/TASK.md': '# a\n',
-				'tags': 'ui , screens\n'
+				tags: 'ui , screens\n'
 			})
 		);
 		expect([...folder.files.keys()].toSorted()).toEqual([
@@ -395,7 +393,7 @@ describe('fromDirectoryEntry', () => {
 
 	it('reads a dropped tasks folder, putting the paths back', async () => {
 		const folder = await fromDirectoryEntry(
-			entryTree('tasks', { '20260101-000001/TASK.md': '# a\n', 'tags': 'ui , a\n' })
+			entryTree('tasks', { '20260101-000001/TASK.md': '# a\n', tags: 'ui , a\n' })
 		);
 		expect([...folder.files.keys()].toSorted()).toEqual([
 			'tasks/20260101-000001/TASK.md',

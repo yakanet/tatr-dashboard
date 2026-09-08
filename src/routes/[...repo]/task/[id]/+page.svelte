@@ -143,11 +143,7 @@
 			{:else}
 				<div class="journal">
 					{#each entries as entry, index (index)}
-						<div
-							class="entry"
-							class:first={index === 0}
-							class:last={index === entries.length - 1}
-						>
+						<div class="entry" class:first={index === 0} class:last={index === entries.length - 1}>
 							<span class="bullet"></span>
 							<div class="prose">{@html render(entry)}</div>
 						</div>

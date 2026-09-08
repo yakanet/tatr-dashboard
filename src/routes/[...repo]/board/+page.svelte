@@ -247,5 +247,4 @@
 	.empty {
 		margin: 0.75rem 0.15rem 0;
 	}
-
 </style>

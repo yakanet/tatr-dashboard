@@ -30,7 +30,11 @@ describe('QueryState', () => {
 	});
 
 	it('filters on a tag', () => {
-		expect(withText(':bug').apply(tasks).map((task) => task.id)).toEqual(['20260101-000001']);
+		expect(
+			withText(':bug')
+				.apply(tasks)
+				.map((task) => task.id)
+		).toEqual(['20260101-000001']);
 	});
 
 	it('honours the closed toggle', () => {

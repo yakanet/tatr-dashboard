@@ -27,11 +27,7 @@ export interface Provider {
 }
 
 export type ProviderFailure =
-	| 'rate-limited'
-	| 'not-found'
-	| 'network'
-	| 'unsupported-host'
-	| 'malformed';
+	'rate-limited' | 'not-found' | 'network' | 'unsupported-host' | 'malformed';
 
 export class ProviderError extends Error {
 	readonly failure: ProviderFailure;

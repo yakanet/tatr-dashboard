@@ -206,5 +206,4 @@
 	.stale {
 		color: var(--warning);
 	}
-
 </style>

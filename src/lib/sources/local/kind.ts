@@ -9,9 +9,9 @@
  * storage — and hence this file, which holds for a folder what a forge keeps in
  * its chain of listers and its URL shapes: the source itself.
  */
-import {isLocal} from '../../repo/ref.ts';
-import {NoSourceError, type Source, type SourceKind} from '../source.ts';
-import {fromDirectoryHandle, listFolder, type LocalFolder, readBranch} from './folder.ts';
+import { isLocal } from '../../repo/ref.ts';
+import { NoSourceError, type Source, type SourceKind } from '../source.ts';
+import { fromDirectoryHandle, listFolder, type LocalFolder, readBranch } from './folder.ts';
 
 /**
  * The folder, and the handle it arrived with when it had one.

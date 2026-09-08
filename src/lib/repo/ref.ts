@@ -110,7 +110,10 @@ export function parseRepoInput(input: string): RepoRef | null {
 }
 
 function fromHostAndPath(host: string, path: string): RepoRef | null {
-	const segments = path.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+	const segments = path
+		.replace(/^\/+|\/+$/g, '')
+		.split('/')
+		.filter(Boolean);
 	if (segments.length < 2) return null;
 
 	const [owner, name, keyword, ...rest] = segments;

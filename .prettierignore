@@ -1,0 +1,30 @@
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Miscellaneous
+/static/
+
+# Repository content, shown verbatim.
+#
+# `tasks/` is this project's own backlog in the tatr format, and it is also the
+# fixture the viewer is pointed at. Reflowing a task's prose would change what
+# the screen shows, which is the one thing this project refuses to do to a
+# repository it reads — its own included.
+tasks/
+
+# Replays of the reference binary's output, compared byte for byte. Regenerating
+# them needs the checkout at ../tatr and a compiler, so a formatter must not be
+# the thing that changes them.
+tests/fixtures/
+
+# Working material rather than the site: the plan, the design canvas.
+.claude/
+
+# Build output.
+build/
+.svelte-kit/
+

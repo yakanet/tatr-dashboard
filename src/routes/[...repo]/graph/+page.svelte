@@ -198,10 +198,7 @@
 				{#each graph.clusters as cluster (cluster.nodes[0].task.id)}
 					{@const draw = drawing(cluster)}
 					<article class="cluster" class:wide={cluster.nodes.length >= 5}>
-						<svg
-							viewBox="0 0 {draw.width} {draw.height}"
-							style:max-width="{draw.width * SCALE}px"
-						>
+						<svg viewBox="0 0 {draw.width} {draw.height}" style:max-width="{draw.width * SCALE}px">
 							{#each draw.lines as line, i (i)}
 								<line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
 								{#each line.heads as head (head)}
@@ -242,7 +239,6 @@
 				{/each}
 			</div>
 		{/if}
-
 	{/if}
 </main>
 
@@ -394,5 +390,4 @@
 	li a:hover {
 		color: var(--accent-text);
 	}
-
 </style>

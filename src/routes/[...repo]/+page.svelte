@@ -199,7 +199,8 @@
 						<li>
 							<span class="prio">{task.priority}</span>
 							<a class="title" href={taskHref(task.id)} data-key-row
-								>{@html inline(task.title, task.id)}</a>
+								>{@html inline(task.title, task.id)}</a
+							>
 							{#each task.tags as tag (tag)}
 								<button class="tag" onclick={() => pick(`:${tag}`)}>{tag}</button>
 							{/each}
@@ -505,5 +506,4 @@
 		color: var(--muted);
 		font-variant-numeric: tabular-nums;
 	}
-
 </style>

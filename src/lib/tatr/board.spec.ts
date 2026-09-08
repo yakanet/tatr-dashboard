@@ -37,9 +37,7 @@ describe('toColumns', () => {
 	it('counts a closed task as done even when still tagged', () => {
 		// A task left tagged after being finished is finished, and a card belongs
 		// to exactly one column.
-		const [backlog, progress, done] = toColumns([
-			make('20260101-000001', 90, [IN_PROGRESS], true)
-		]);
+		const [backlog, progress, done] = toColumns([make('20260101-000001', 90, [IN_PROGRESS], true)]);
 		expect(ids(done.tasks)).toEqual(['20260101-000001']);
 		expect(progress.tasks).toEqual([]);
 		expect(backlog.tasks).toEqual([]);
@@ -51,11 +49,7 @@ describe('toColumns', () => {
 			make('20260101-000002', 110, []),
 			make('20260101-000003', 90, [])
 		]);
-		expect(ids(backlog.tasks)).toEqual([
-			'20260101-000002',
-			'20260101-000003',
-			'20260101-000001'
-		]);
+		expect(ids(backlog.tasks)).toEqual(['20260101-000002', '20260101-000003', '20260101-000001']);
 	});
 
 	it('breaks a priority tie by id, oldest first', () => {
@@ -71,11 +65,7 @@ describe('toColumns', () => {
 			make('20260303-000001', 10, [], true),
 			make('20260202-000001', 50, [], true)
 		]);
-		expect(ids(done.tasks)).toEqual([
-			'20260303-000001',
-			'20260202-000001',
-			'20260101-000001'
-		]);
+		expect(ids(done.tasks)).toEqual(['20260303-000001', '20260202-000001', '20260101-000001']);
 	});
 
 	it('handles several tasks in progress, which upstream has', () => {

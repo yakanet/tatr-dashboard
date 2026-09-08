@@ -37,8 +37,7 @@
 	let over = $state(0);
 
 	/** A dragged text selection or link is not an offer of a folder. */
-	const carriesFiles = (event: DragEvent) =>
-		event.dataTransfer?.types.includes('Files') ?? false;
+	const carriesFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false;
 
 	/** The picker is Chromium only, and must be called from a real click. */
 	const hasPicker = folderAccess() === 'picker';
@@ -139,12 +138,7 @@
      is decoration while nobody is dragging, and too small a thing to aim at the
      moment somebody is; this way it is the largest target the page can offer
      and costs no pixels until it is wanted. -->
-<svelte:window
-	ondragenter={entered}
-	ondragleave={left}
-	ondragover={hovered}
-	ondrop={dropped}
-/>
+<svelte:window ondragenter={entered} ondragleave={left} ondragover={hovered} ondrop={dropped} />
 
 <span class="offer">
 	<button type="button" onclick={pick}>{label}</button>

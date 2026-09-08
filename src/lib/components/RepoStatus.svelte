@@ -49,8 +49,7 @@
 		{:else if repo.failure.kind === 'no-tasks-folder'}
 			<h2>No tasks folder</h2>
 			<p>
-				<code>{describeRef(ref)}</code> was read, but it has no <code>tasks/</code> directory at its
-				root.
+				<code>{describeRef(ref)}</code> was read, but it has no <code>tasks/</code> directory at its root.
 			</p>
 			<p class="note">
 				This viewer expects the tatr layout: one folder per task, each holding a
@@ -147,5 +146,4 @@
 		gap: 1rem;
 		margin-top: 0.75rem;
 	}
-
 </style>

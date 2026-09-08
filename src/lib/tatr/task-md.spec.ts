@@ -167,7 +167,9 @@ describe('references', () => {
 
 	it('finds ids wrapped as TASK(...)', async () => {
 		const { extractReferences } = await import('./task.ts');
-		expect(extractReferences('See TASK(20260825-170729) for context.')).toEqual(['20260825-170729']);
+		expect(extractReferences('See TASK(20260825-170729) for context.')).toEqual([
+			'20260825-170729'
+		]);
 	});
 
 	it('deduplicates and sorts', async () => {

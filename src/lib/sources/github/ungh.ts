@@ -9,7 +9,7 @@
  * sits behind GitHub rather than in front of it: the normal path should not
  * depend on someone else's goodwill.
  */
-import {type Provider, ProviderError} from '../provider.ts';
+import { type Provider, ProviderError } from '../provider.ts';
 
 const API = 'https://ungh.cc';
 const NAME = 'ungh';

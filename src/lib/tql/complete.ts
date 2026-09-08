@@ -102,7 +102,11 @@ export function tokenAt(text: string, cursor: number): { start: number; end: num
  * holds spaces, `tokenAt` stops at them, and by the second word the `~"` is out
  * of view. The text before the caret is what knows.
  */
-export function complete(text: string, cursor: number, tags: readonly TagOption[]): Completions | null {
+export function complete(
+	text: string,
+	cursor: number,
+	tags: readonly TagOption[]
+): Completions | null {
 	const { start, end } = tokenAt(text, cursor);
 	const token = text.slice(start, cursor);
 	if (token.length === 0) return null;
@@ -122,20 +126,19 @@ export function complete(text: string, cursor: number, tags: readonly TagOption[
 				b.count - a.count ||
 				a.name.localeCompare(b.name)
 		)
-		.map(
-			(tag): Completion => ({
-				value: `:${tag.name}`,
-				detail: tag.description ?? '',
-				count: tag.count,
-				kind: 'tag'
-			})
-		);
+		.map((tag): Completion => ({
+			value: `:${tag.name}`,
+			detail: tag.description ?? '',
+			count: tag.count,
+			kind: 'tag'
+		}));
 
 	const keywords = sigil
 		? []
-		: KEYWORDS.filter((keyword) => keyword.value.startsWith(needle)).map(
-				(keyword): Completion => ({ ...keyword, kind: 'keyword' })
-			);
+		: KEYWORDS.filter((keyword) => keyword.value.startsWith(needle)).map((keyword): Completion => ({
+				...keyword,
+				kind: 'keyword'
+			}));
 
 	const items = [...matching, ...keywords].slice(0, 8);
 	// An offer identical to what is already typed teaches nothing.

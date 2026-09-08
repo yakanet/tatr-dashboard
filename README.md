@@ -24,23 +24,23 @@ In the browser. No server, no backend, no clone.
 free-form Markdown. It is a genuinely good idea: no database, no lock file,
 tasks move with the branch, and a change to one shows up in a diff.
 
-It stops being enough the moment somebody asks *what is actually left?*
+It stops being enough the moment somebody asks _what is actually left?_
 
 Paste a repository name. That is the entire setup.
 
 ## Every view is a link
 
-The repository *is* the route, so anything you are looking at can be sent to
+The repository _is_ the route, so anything you are looking at can be sent to
 someone else and land them exactly there.
 
-| URL | Shows |
-| --- | --- |
-| `/yakanet/tatr-dashboard` | the dashboard for `github.com/yakanet/tatr-dashboard` |
-| `/yakanet/tatr-dashboard@main` | the same repository, pinned to a branch by name |
-| `/yakanet/tatr-dashboard/list?q=:ui` | the task list, filtered |
-| `/yakanet/tatr-dashboard/task/20260906-211234` | one task, rendered |
-| `/yakanet/tatr-dashboard/board` | backlog, in progress, done |
-| `/yakanet/tatr-dashboard/graph` | which tasks cite which |
+| URL                                            | Shows                                                 |
+| ---------------------------------------------- | ----------------------------------------------------- |
+| `/yakanet/tatr-dashboard`                      | the dashboard for `github.com/yakanet/tatr-dashboard` |
+| `/yakanet/tatr-dashboard@main`                 | the same repository, pinned to a branch by name       |
+| `/yakanet/tatr-dashboard/list?q=:ui`           | the task list, filtered                               |
+| `/yakanet/tatr-dashboard/task/20260906-211234` | one task, rendered                                    |
+| `/yakanet/tatr-dashboard/board`                | backlog, in progress, done                            |
+| `/yakanet/tatr-dashboard/graph`                | which tasks cite which                                |
 
 Nothing to sign in to, nothing to configure, no repository to register first.
 
@@ -57,20 +57,20 @@ the query, `1`-`4` switch view, and `?` lists the rest.
 The search box speaks TQL — the grammar `tatr ls` accepts. Copy a query out of
 your shell history, paste it in, get the same answer.
 
-| Query | Matches |
-| --- | --- |
-| `:ui` | tasks tagged `ui` |
-| `not :scope` | everything nobody is working on right now |
-| `priority ge 90` | what deserves attention |
-| `[:ui or :tql] and priority ge 90` | brackets group, so no shell quoting |
-| `tagged` | tasks carrying at least one tag |
-| `~"query language"` | titles holding every one of those words |
-| `any` | everything |
+| Query                              | Matches                                   |
+| ---------------------------------- | ----------------------------------------- |
+| `:ui`                              | tasks tagged `ui`                         |
+| `not :scope`                       | everything nobody is working on right now |
+| `priority ge 90`                   | what deserves attention                   |
+| `[:ui or :tql] and priority ge 90` | brackets group, so no shell quoting       |
+| `tagged`                           | tasks carrying at least one tag           |
+| `~"query language"`                | titles holding every one of those words   |
+| `any`                              | everything                                |
 
 Comparisons are spelled as words (`lt le gt ge eq ne`) and square brackets
 replace parentheses — that is how a query survives a shell without quoting. The
 parser is typed: `and`/`or`/`not` take booleans, comparisons take integers, and
-a mistake is pointed at *the offending token* instead of being silently coerced.
+a mistake is pointed at _the offending token_ instead of being silently coerced.
 Tag names and keywords complete as you type, with what each tag means alongside
 it — the repository's own vocabulary, which nothing else on screen lists.
 
@@ -89,7 +89,7 @@ grouping words that contain spaces and nothing more.
 ## Nothing to sign up for. Nothing to hand over.
 
 There is no account, no cookie, no analytics, no telemetry — there is no
-*server*. The site is a folder of static files, and everything it knows about a
+_server_. The site is a folder of static files, and everything it knows about a
 repository it learned in your browser, seconds ago.
 
 - **No sign-in, no token, no permissions to grant.** It reads public
@@ -98,7 +98,7 @@ repository it learned in your browser, seconds ago.
   type, the tasks you follow: none of it is sent anywhere, because there is
   nowhere to send it.
 - **The cache is yours too.** Task metadata is kept in your own browser's
-  IndexedDB and re-read only when *you* press Refresh — never on a timer behind
+  IndexedDB and re-read only when _you_ press Refresh — never on a timer behind
   your back. Clear your site data and it is gone, completely.
 - **Only metadata is kept.** Descriptions are more than half the bytes and cost
   nothing to fetch again, so they are never written down at all.
@@ -153,9 +153,9 @@ button says instead of pretending.
 
 Either way your browser asks first, and the two ask differently — so the page
 says which one is coming before you click. The picker asks for access to that
-one folder. The directory input asks by the *file count*, because it cannot know
+one folder. The directory input asks by the _file count_, because it cannot know
 that this page will not upload what it is given: a whole checkout produces
-*"import 7,775 files?"*, most of which is `node_modules`, and all but the
+_"import 7,775 files?"_, most of which is `node_modules`, and all but the
 `tasks/` folder is discarded on arrival. Picking `tasks/` directly is accepted
 for exactly that reason, and costs only the branch name, which lives in
 `.git/HEAD` one level up.
@@ -179,13 +179,13 @@ included, because polishing it would show a screen the product cannot produce.
 
 ## Built with
 
-| | |
-| --- | --- |
-| Framework | SvelteKit 3 (release candidate), Svelte 5 runes |
-| Build | Vite 8, `adapter-static`, prerendered to plain files |
-| Markdown | markdown-it |
-| Tests | Vitest |
-| Package manager | pnpm, pinned |
+|                 |                                                      |
+| --------------- | ---------------------------------------------------- |
+| Framework       | SvelteKit 3 (release candidate), Svelte 5 runes      |
+| Build           | Vite 8, `adapter-static`, prerendered to plain files |
+| Markdown        | markdown-it                                          |
+| Tests           | Vitest                                               |
+| Package manager | pnpm, pinned                                         |
 
 ## Run it
 

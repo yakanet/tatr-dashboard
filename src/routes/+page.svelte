@@ -17,7 +17,7 @@
 		{ id: 'local', name: 'A folder' }
 	] as const;
 
-	let where = $state<typeof WHERE[number]['id']>('remote');
+	let where = $state<(typeof WHERE)[number]['id']>('remote');
 	/**
 	 * Read once, in the browser: the local panel only ever renders after a click,
 	 * so the prerendered HTML never carries an answer to correct.
@@ -89,7 +89,11 @@
      no nav here to switch between, so `1`-`9` stay unwired rather than being
      given something invented for them; what is left is walking the
      repositories, opening one, `/` for the box, and `?` for the list. -->
-<Shortcuts onhelp={() => (helping = !helping)} ondismiss={() => (helping = false)} modal={helping} />
+<Shortcuts
+	onhelp={() => (helping = !helping)}
+	ondismiss={() => (helping = false)}
+	modal={helping}
+/>
 
 {#if helping}
 	<KeyHelp views={[]} onclose={() => (helping = false)} />
@@ -101,8 +105,8 @@
 	<h1>Read any <code>tasks/</code> folder as a dashboard.</h1>
 	<p class="lead">
 		Point it at any repository that follows the
-		<a href="https://github.com/tsoding/tatr">tatr</a> layout, or at a folder on this machine.
-		Nothing is uploaded — the files are read in your browser.
+		<a href="https://github.com/tsoding/tatr">tatr</a> layout, or at a folder on this machine. Nothing
+		is uploaded — the files are read in your browser.
 	</p>
 
 	<!-- Two ways in, one at a time: each needs a line of explanation, and stacked
@@ -129,9 +133,14 @@
 		<div role="tabpanel" id="panel-remote" aria-labelledby="tab-remote">
 			<form onsubmit={open}>
 				<span class="field">
-					<svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-						stroke-linecap="round" aria-hidden="true"
-						><circle cx="11" cy="11" r="7" /><path d="m20 20-4.3-4.3" /></svg
+					<svg
+						class="glyph"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4.3-4.3" /></svg
 					>
 					<input
 						bind:value={input}
@@ -162,8 +171,8 @@
 		<div role="tabpanel" id="panel-local" aria-labelledby="tab-local">
 			{#if access === 'none'}
 				<p class="accepts">
-					This browser cannot open a folder: it has neither the File System Access API nor
-					directory selection. A repository still works.
+					This browser cannot open a folder: it has neither the File System Access API nor directory
+					selection. A repository still works.
 				</p>
 			{:else}
 				<div class="local">
@@ -174,14 +183,14 @@
 				     a surprise dialog reads as a warning about this site. -->
 				{#if access === 'picker'}
 					<p class="accepts">
-						Your browser will ask for access to that one folder, and <strong>Refresh</strong> will
-						reread it. Nothing is uploaded: there is no server to upload to.
+						Your browser will ask for access to that one folder, and <strong>Refresh</strong> will reread
+						it. Nothing is uploaded: there is no server to upload to.
 					</p>
 				{:else}
 					<p class="accepts">
 						Picking a folder makes your browser count its files first — choose just the
-						<code>tasks/</code> folder to keep that number small, or drop the folder here
-						instead. Nothing is uploaded: there is no server to upload to.
+						<code>tasks/</code> folder to keep that number small, or drop the folder here instead. Nothing
+						is uploaded: there is no server to upload to.
 					</p>
 				{/if}
 			{/if}

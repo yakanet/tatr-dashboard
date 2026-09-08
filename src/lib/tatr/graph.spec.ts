@@ -78,7 +78,10 @@ describe('buildGraph', () => {
 	});
 
 	it('keeps the direction of a one-way citation', () => {
-		const { clusters } = buildGraph([make('20260101-000001', 'see 20260101-000002'), make('20260101-000002')]);
+		const { clusters } = buildGraph([
+			make('20260101-000001', 'see 20260101-000002'),
+			make('20260101-000002')
+		]);
 		expect(clusters[0].edges).toEqual([
 			{ from: '20260101-000001', to: '20260101-000002', mutual: false }
 		]);

@@ -110,8 +110,18 @@ export function topByPriority(tasks: Task[], limit: number): Task[] {
 }
 
 const MONTH_NAMES = [
-	'January', 'February', 'March', 'April', 'May', 'June',
-	'July', 'August', 'September', 'October', 'November', 'December'
+	'January',
+	'February',
+	'March',
+	'April',
+	'May',
+	'June',
+	'July',
+	'August',
+	'September',
+	'October',
+	'November',
+	'December'
 ];
 
 /** `2026-03` as `March 2026`. */

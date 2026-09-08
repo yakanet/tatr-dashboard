@@ -48,7 +48,9 @@ export function collectAttachments(entries: readonly Listed[]): Map<string, Atta
 		if (name.split('/').some((segment) => segment.startsWith('.'))) continue;
 
 		const attachment: Attachment =
-			entry.size === undefined ? { name, path: entry.path } : { name, path: entry.path, size: entry.size };
+			entry.size === undefined
+				? { name, path: entry.path }
+				: { name, path: entry.path, size: entry.size };
 
 		const existing = byTask.get(id);
 		if (existing) existing.push(attachment);
