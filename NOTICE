@@ -34,9 +34,15 @@ verbatim. Both are attributed where they appear.
 What is not borrowed
 --------------------
 
-No source code from tatr is copied into this repository. This viewer is an
-independent implementation, in TypeScript, of the same file format and the same
-query language — a format and a behaviour rather than an expression. Where a
-comment says a function is "ported from" a file of the C source, it means the
-behaviour was reproduced by reading that source; what holds the two together is
-the differential tests above, not shared code.
+No source code from tatr is copied or translated into this repository. This
+viewer is an independent implementation, in TypeScript, of the same file format
+and the same query language — a format and a behaviour rather than an
+expression. Where a comment names a file of the C source, it says where the
+behaviour is defined, not where the code came from; what holds the two together
+is the differential tests above.
+
+Two exceptions, both quotations rather than code, and both deliberate: the
+diagnostics in src/lib/tql/query.ts reproduce word for word what the CLI prints
+above a bad query, because a query is meant to move between the two tools
+unchanged and so is the complaint about it. They are credited where they
+appear.

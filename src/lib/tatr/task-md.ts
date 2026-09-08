@@ -1,5 +1,5 @@
 /**
- * Parser for `TASK.md`, ported from the reference implementation in `src/md.c`
+ * Parser for `TASK.md`, written from the behaviour of `src/md.c`
  * and `src/task.c` rather than from the README, which simplifies in ways that
  * matter.
  *

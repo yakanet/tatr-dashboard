@@ -1,7 +1,7 @@
 /**
  * TQL — the Tatr Query Language, as accepted by `tatr ls`.
  *
- * A port of the reference implementation in `src/query.c`, with one addition of
+ * The grammar and the diagnostics of `src/query.c`, with one addition of
  * our own. The grammar:
  *
  *     expr    ::= or

@@ -45,3 +45,35 @@ they come from rather than claiming them.
 
 Not legal advice, and it was not written by a lawyer. What it is: the facts
 about which files carry whose work, written down where a reader will find them.
+
+---
+
+`chopHuid` is rewritten, so the claim the NOTICE could not make is now made:
+nothing here is copied *or translated*.
+
+It reads the id off the format as one sticky pattern rather than as the two
+digit loops it used to mirror — a declarative shape in this language's terms
+instead of a transliteration of somebody else's control flow. Thirty-one lines
+became eight, which was not the point but is not a loss either.
+
+What made the rewrite safe was closing a gap first. The behaviour that decides
+where a scan *ends* — the end of the text ends an id, so a time cut short by it
+is accepted while the same thing before a space is not — was pinned by no test
+at all. Four cases now cover it, written against the old implementation and
+passing before a line of it changed; the rewrite then had something to be
+judged by.
+
+Proved by breaking it three ways: dropping the end-of-text alternative fails
+the truncation cases, adding a word boundary fails the glued-id cases, and
+making the suffix lazy fails the team-suffix case **and the differential graph
+test** — the fixture recorded from the real binary catching a wrong suffix rule
+over 64 real tasks. That last one is the guarantee this project actually rests
+on.
+
+The comments followed the code. Five said "ported from" or "a port of", which
+invites exactly the reading the rewrite was meant to remove; they now say where
+the behaviour is *defined* rather than where the code came from. The two
+diagnostics in `query.ts` stay verbatim on purpose — a query is meant to move
+between the two tools unchanged, and so is the complaint about it — and the
+NOTICE names them as quotations.
+

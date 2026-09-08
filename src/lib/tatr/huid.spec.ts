@@ -97,6 +97,32 @@ describe('scanHuids', () => {
 		expect(scanHuids('2026-01-01 is not one, nor is 20260101')).toEqual([]);
 	});
 
+	/**
+	 * The scan stops at the end of the text rather than at the end of a
+	 * well-formed id, so the last id in a text can be accepted while
+	 * incomplete. Harmless — every caller then looks the task up and finds
+	 * nothing — but it decides where a scan ends, so it is pinned rather than
+	 * left to be discovered by whoever rewrites this.
+	 */
+	it('accepts a time cut short by the end of the text', () => {
+		expect(scanHuids('see 20260101-0000')).toEqual(['20260101-0000']);
+		expect(scanHuids('see 20260101-')).toEqual(['20260101-']);
+	});
+
+	it('does not accept a date cut short by it', () => {
+		// Nothing follows the digits, so the dash that must come next is missing.
+		expect(scanHuids('see 2026010')).toEqual([]);
+	});
+
+	it('accepts one cut short only at the end, not before a space', () => {
+		expect(scanHuids('20260101-0000 and 20260101-000002')).toEqual(['20260101-000002']);
+	});
+
+	it('stops a suffix at the first character it cannot hold', () => {
+		expect(scanHuids('20260101-000001-rexim_two')).toEqual(['20260101-000001-rexim']);
+		expect(scanHuids('20260101-000001-a.b')).toEqual(['20260101-000001-a']);
+	});
+
 	it('resumes just past an id, so two glued ids both count', () => {
 		expect(scanHuids('20260101-00000120260101-000002')).toEqual([
 			'20260101-000001',

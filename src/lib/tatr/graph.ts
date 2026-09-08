@@ -1,7 +1,7 @@
 /**
  * The cross-reference graph: which tasks cite which.
  *
- * Ported from `graph_run` in `src/tatr.c`, which scans every `TASK.md` for
+ * Behaviour taken from `graph_run` in `src/tatr.c`, which scans every `TASK.md` for
  * anything shaped like a HUID and keeps the ones naming a folder that exists.
  * That existence check is what does the real work: a task's body also carries
  * the timestamps of its own journal entries, as `NOTE(20260829-201427)`, and

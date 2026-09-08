@@ -7,7 +7,7 @@
  * Language` — which exists upstream — names the tag `tql` and describes it as
  * `Tatr Query Language`.
  *
- * Ported from `src/tatr.c`.
+ * Behaviour taken from `src/tatr.c`.
  */
 
 export interface TagDescriptions {

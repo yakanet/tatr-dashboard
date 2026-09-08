@@ -6,7 +6,8 @@
  * they generate them in parallel branches.
  *
  * Because the id *is* a timestamp, every task has a creation date without a
- * single extra request. Ported from `src/huid.c`.
+ * single extra request. The format is the one `src/huid.c` defines; what is
+ * written here follows its behaviour, which the spec pins case by case.
  */
 
 const HUID = /^(\d{8})-(\d{6})(?:-([A-Za-z0-9-]*))?$/;
@@ -57,35 +58,38 @@ export function parseHuid(id: string): Huid | null {
 	return suffix ? { id, created, suffix } : { id, created };
 }
 
-const isDigit = (c: string) => c >= '0' && c <= '9';
-const isAlnumOrDash = (c: string) =>
-	c === '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+/**
+ * An id as a scan of prose accepts it, anchored where the scan is looking.
+ *
+ * Sticky rather than searching, because the caller decides where to look: the
+ * scan below advances one character at a time, and a pattern that searched
+ * would skip ahead and report a position the caller did not ask about.
+ *
+ * The shape reads off the format, with two things worth naming because they
+ * decide where an id ends:
+ *
+ * - **No word boundary.** `abc20260101-000001` holds an id, and so does
+ *   `TASK(20260101-000001)`. The format's own files wrap ids in punctuation, so
+ *   a boundary would lose them.
+ * - **The end of the text ends an id.** A time cut short by it is accepted —
+ *   `20260101-0000`, and even `20260101-` — while the same thing before a space
+ *   is not. Which is harmless, every caller looking the task up and finding
+ *   nothing, and is pinned by the spec because it decides where a scan stops.
+ *
+ * A suffix is greedy over what it may hold, so it ends at the first character
+ * that is neither a letter, a digit nor a dash.
+ */
+const AT_CURSOR = /\d{8}-(?:\d{6}(?:-[A-Za-z0-9-]*)?|\d{0,5}$)/y;
 
 /**
- * Reads a HUID starting at `start`, returning the index just past it, or `-1`.
+ * Reads an id at `start`, returning the index just past it, or `-1`.
  *
- * A direct port of `chop_huid` in `src/huid.c`, whose shape matters more than it
- * looks: it recognises an id *anywhere*, with no word boundary, so a HUID glued
- * to the preceding word still counts. Its digit loops also stop at the end of
- * the text, so a truncated id at the very end is accepted — harmless, because
- * every caller then checks that the task exists.
+ * The one pattern above carries a cursor, which is assigned here on every call
+ * — so it keeps nothing between them, and two scans are never in flight.
  */
 function chopHuid(text: string, start: number): number {
-	let i = start;
-	for (let n = 0; i < text.length && n < 8; n++) {
-		if (!isDigit(text[i])) return -1;
-		i++;
-	}
-	if (text[i] !== '-') return -1;
-	i++;
-	for (let n = 0; i < text.length && n < 6; n++) {
-		if (!isDigit(text[i])) return -1;
-		i++;
-	}
-	if (text[i] === '-') {
-		while (i < text.length && isAlnumOrDash(text[i])) i++;
-	}
-	return i;
+	AT_CURSOR.lastIndex = start;
+	return AT_CURSOR.test(text) ? AT_CURSOR.lastIndex : -1;
 }
 
 /** Where an id sits in the text it was read from: `[start, end)`. */
